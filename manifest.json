@@ -1,12 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Notebook to Anki Bridge",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Capture flashcards from supported Google Notebook pages and export them to Anki.",
   "browser_specific_settings": {
     "gecko": {
       "id": "notebook-to-anki-bridge@project.invalid",
-      "strict_min_version": "128.0"
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
     }
   },
   "host_permissions": [
