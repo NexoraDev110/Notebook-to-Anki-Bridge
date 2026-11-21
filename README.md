@@ -2,9 +2,9 @@
 
 A Firefox extension that captures flashcards from supported Google Notebook artifact pages and exports them to Anki.
 
-## Version 0.3.0
+## Version 0.3.1
 
-This release removes the one-card test action and active-tab diagnostic popup. Clicking the extension icon opens an information popup that reads the installed version directly from the extension manifest.
+This release highlights the missing-destination-deck warning in red. It also removes the one-card test action and active-tab diagnostic popup. Clicking the extension icon opens an information popup that reads the installed version directly from the extension manifest.
 
 The extension is no longer branded or configured specifically for Harrison. It uses generic Notebook/Anki labels and tags, and lets the user select any existing Anki deck.
 
