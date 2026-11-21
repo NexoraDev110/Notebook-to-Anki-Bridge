@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "0.2.3";
+  const VERSION = "0.2.4";
   const PREFIX = "[Harrison Anki Bridge]";
   const status = {
     loaded: true, version: VERSION, host: location.host,
@@ -124,9 +124,19 @@
     root.innerHTML = `
       <button id="hab-toggle" type="button" title="Harrison Anki Bridge">HAB</button>
       <section id="hab-panel" hidden>
-        <header><strong>Harrison Anki Bridge 0.2.3</strong><button id="hab-close" type="button">×</button></header>
+        <header><strong>Harrison Anki Bridge 0.2.4</strong><button id="hab-close" type="button">×</button></header>
         <p id="hab-count">Waiting for the Notebook flashcards RPC response.</p>
         <pre id="hab-preview"></pre>
+        <div class="hab-deck-picker">
+          <label for="hab-deck">Anki destination deck</label>
+          <div class="hab-deck-row">
+            <select id="hab-deck" disabled>
+              <option value="">Load decks from Anki…</option>
+            </select>
+            <button id="hab-deck-refresh" type="button">↻</button>
+          </div>
+          <small id="hab-deck-status">Connect to AnkiConnect to load your existing decks.</small>
+        </div>
         <div class="hab-actions">
           <button id="hab-csv" type="button" disabled>Export CSV</button>
           <button id="hab-tsv" type="button" disabled>Export TSV</button>
@@ -137,10 +147,55 @@
       </section>`;
     document.documentElement.appendChild(root);
     const panel = root.querySelector("#hab-panel");
+    const deckSelect = root.querySelector("#hab-deck");
+    const deckStatus = root.querySelector("#hab-deck-status");
+
+    async function loadDecks() {
+      const refreshButton = root.querySelector("#hab-deck-refresh");
+      refreshButton.disabled = true;
+      deckSelect.disabled = true;
+      deckStatus.textContent = "Loading existing decks from Anki…";
+      try {
+        const response = await browser.runtime.sendMessage({ type: "HAB_ANKI_GET_DECKS" });
+        if (!response || !response.ok || !Array.isArray(response.decks)) {
+          throw new Error(response?.error || "AnkiConnect returned an invalid deck list.");
+        }
+        const previous = deckSelect.value;
+        deckSelect.replaceChildren();
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Select destination deck…";
+        deckSelect.appendChild(placeholder);
+        for (const name of response.decks) {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          deckSelect.appendChild(option);
+        }
+        if (response.decks.includes(previous)) deckSelect.value = previous;
+        else if (response.decks.includes("Harrison::Inbox")) deckSelect.value = "Harrison::Inbox";
+        deckSelect.disabled = response.decks.length === 0;
+        deckStatus.textContent = response.decks.length
+          ? response.decks.length + " existing deck(s) loaded. No deck will be created automatically."
+          : "No decks were returned by AnkiConnect.";
+      } catch (error) {
+        deckSelect.replaceChildren();
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Could not load decks";
+        deckSelect.appendChild(option);
+        deckStatus.textContent = "AnkiConnect error: " + clean(error.message || error);
+      } finally {
+        refreshButton.disabled = false;
+      }
+    }
+
     root.querySelector("#hab-toggle").addEventListener("click", () => {
       panel.hidden = !panel.hidden;
       renderStatus();
+      if (!panel.hidden && !deckSelect.options.length) loadDecks();
     });
+    root.querySelector("#hab-deck-refresh").addEventListener("click", loadDecks);
     root.querySelector("#hab-close").addEventListener("click", () => { panel.hidden = true; });
     root.querySelector("#hab-csv").addEventListener("click", () => {
       const rows = [["Front", "Back"], ...cards.map(c => [c.front, c.back])];
@@ -159,13 +214,22 @@
       if (!selected.length) return;
       if (!testOnly && !window.confirm("Send " + selected.length + " cards to Anki? Existing notes and repeated Front fields will be skipped.")) return;
 
+      const deckName = deckSelect.value;
+      if (!deckName) {
+        deckStatus.textContent = "Select an existing Anki deck before importing.";
+        return;
+      }
       const testButton = root.querySelector("#hab-anki-test");
       const allButton = root.querySelector("#hab-anki-all");
       testButton.disabled = true;
       allButton.disabled = true;
       root.querySelector("#hab-count").textContent = "Checking AnkiConnect and sending " + selected.length + " note(s)…";
       try {
-        const response = await browser.runtime.sendMessage({ type: "HAB_ANKI_ADD", notes: selected });
+        const response = await browser.runtime.sendMessage({
+          type: "HAB_ANKI_ADD",
+          deckName,
+          notes: selected
+        });
         if (!response) throw new Error("No response from the background script.");
         const summary = [
           "Added: " + (response.added || 0),
@@ -188,6 +252,7 @@
     root.querySelector("#hab-anki-test").addEventListener("click", () => sendToAnki(true));
     root.querySelector("#hab-anki-all").addEventListener("click", () => sendToAnki(false));
     renderStatus();
+    loadDecks();
   }
 
   ensureUI();
