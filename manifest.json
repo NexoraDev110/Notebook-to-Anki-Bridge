@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Harrison Anki Bridge",
-  "version": "0.1.2",
-  "description": "Export Notebook study material to Anki.",
+  "version": "0.2.0",
+  "description": "Export Notebook flashcards to Anki.",
   "browser_specific_settings": {
     "gecko": {
       "id": "harrison-anki-bridge@example.local",
-      "strict_min_version": "115.0"
+      "strict_min_version": "128.0"
     }
   },
   "permissions": ["activeTab", "tabs", "storage"],
@@ -25,9 +25,15 @@
   "content_scripts": [
     {
       "matches": ["https://notebook.google.com/*"],
-      "js": ["content.js"],
+      "js": ["network-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://notebook.google.com/*"],
+      "js": ["rpc-parser.js", "content.js"],
       "css": ["content.css"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
   ]
 }
