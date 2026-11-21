@@ -2,7 +2,7 @@
 
 Firefox extension for exporting Google Notebook flashcards to Anki.
 
-## Version 0.2.0 (experimental)
+## Version 0.2.1 (experimental)
 
 This version replaces DOM text heuristics with a dedicated adapter for the observed `Fxmvse` RPC response from `https://notebook.google.com`.
 
