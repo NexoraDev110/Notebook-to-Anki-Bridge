@@ -9,7 +9,7 @@
   const matchTarget = (value) => {
     try {
       const url = new URL(String(value), location.href);
-      if (url.origin !== location.origin || !url.pathname.includes(TARGET)) return null;
+      if (url.origin !== location.origin || !url.pathname !== TARGET) return null;
 
       const rpcIds = (url.searchParams.get("rpcids") || "").split(",");
       const matchedRpc = rpcIds.find(id => ALLOWED_RPCS.has(id));
@@ -54,9 +54,8 @@
   const originalOpen = XMLHttpRequest.prototype.open;
   const originalSend = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-    this.__nabTarget = matchTarget(url)
-      ? { url: String(url), rpcId: matchTarget(url) }
-      : null;
+    const rpcId = matchTarget(url);
+    this.__nabTarget = rpcId ? { url: String(url), rpcId } : null;
     return originalOpen.call(this, method, url, ...rest);
   };
   XMLHttpRequest.prototype.send = function (...args) {
