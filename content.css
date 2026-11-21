@@ -1,0 +1,23 @@
+#hab-root { all: initial; position: fixed; z-index: 2147483647; font-family: Arial, sans-serif; }
+#hab-root * { box-sizing: border-box; font-family: Arial, sans-serif; }
+#hab-toggle {
+  position: fixed; right: 18px; bottom: 18px; width: 48px; height: 48px;
+  border: 0; border-radius: 50%; color: #fff; background: #2457a7;
+  box-shadow: 0 2px 10px #0005; font-weight: 700; cursor: pointer;
+}
+#hab-panel {
+  position: fixed; right: 18px; bottom: 76px; width: 290px; padding: 14px;
+  border: 1px solid #dadce0; border-radius: 10px; color: #202124;
+  background: #fff; box-shadow: 0 4px 24px #0003; font-size: 13px;
+}
+#hab-panel[hidden] { display: none !important; }
+#hab-panel header { display: flex; justify-content: space-between; align-items: center; }
+#hab-panel header button { border: 0; background: transparent; font-size: 20px; cursor: pointer; }
+#hab-panel p { line-height: 1.4; }
+#hab-panel .hab-actions { display: grid; gap: 7px; }
+#hab-panel .hab-actions button {
+  padding: 8px; border: 0; border-radius: 6px; color: white;
+  background: #2457a7; cursor: pointer;
+}
+#hab-panel .hab-actions button:disabled { opacity: .45; cursor: not-allowed; }
+#hab-panel small { display: block; margin-top: 10px; color: #5f6368; line-height: 1.4; }
