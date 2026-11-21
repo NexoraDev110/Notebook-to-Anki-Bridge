@@ -1,6 +1,6 @@
 # Notebook to Anki Bridge
 
-A Firefox extension that captures flashcards from supported Google Notebook artifact pages and exports them to Anki.
+A cross-browser extension for Firefox and Chrome that captures flashcards from supported Google Notebook artifact pages and exports them to Anki.
 
 ## Version 0.3.2
 
@@ -44,6 +44,17 @@ This does not imply compatibility with every product or website called NotebookL
 5. Select an existing Anki deck, then export CSV/TSV or send all captured cards to Anki.
 
 Firefox 128 or later is required for MAIN-world content scripts.
+
+## Install (Chrome)
+
+1. Download the repository ZIP from GitHub and extract it.
+2. Open `chrome://extensions`.
+3. Enable **Developer mode**.
+4. Select **Load unpacked** and choose the repository's `chrome` folder (not the repository root).
+5. Open or reload a supported Google Notebook artifact page.
+6. Open the floating **NAB** panel, select an existing Anki deck, then export CSV/TSV or send all captured cards to Anki.
+
+Chrome 111 or later is required for MAIN-world content scripts. The Chrome build uses a Manifest V3 service worker and the Chrome Extensions API.
 
 ## AnkiConnect
 
