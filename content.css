@@ -21,3 +21,15 @@
 }
 #hab-panel .hab-actions button:disabled { opacity: .45; cursor: not-allowed; }
 #hab-panel small { display: block; margin-top: 10px; color: #5f6368; line-height: 1.4; }
+#hab-panel #hab-preview {
+  max-height: 180px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 6px;
+  background: #f1f3f4;
+  color: #202124;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 1.4;
+}
