@@ -62,23 +62,25 @@
   }
 
   function collectBlocks(fieldNode) {
-    const text = [];
+    const parts = [];
     const images = [];
     walk(fieldNode, node => {
       if (!Array.isArray(node)) return;
       const type = firstString(directValue(node, "type"));
       if (type === "text") {
         const value = firstString(directValue(node, "content"));
-        if (value) text.push(value);
+        if (value) parts.push(value);
       } else if (type === "image") {
-        images.push({
+        const image = {
           reference: firstString(directValue(node, "reference")),
           alt: firstString(directValue(node, "alt"))
-        });
+        };
+        images.push(image);
+        parts.push(image.alt ? "[Image: " + image.alt + "]" : "[Image]");
       }
     });
     return {
-      text: [...new Set(text)].join("\n").trim(),
+      text: parts.join("\n").trim(),
       images
     };
   }
