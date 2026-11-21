@@ -1,40 +1,37 @@
 # Harrison Anki Bridge
 
-Firefox extension for exporting NotebookLM study material to Anki.
+Firefox extension for exporting Google Notebook flashcards to Anki.
 
-## Version 0.1.2
+## Version 0.2.0 (experimental)
 
-**Corrected target host:** `https://notebook.google.com/*`
+This version replaces DOM text heuristics with a dedicated adapter for the observed `Fxmvse` RPC response from `https://notebook.google.com`.
 
-This release targets the host specified for this installation. It does not target `notebooklm.google.com`.
+### How extraction works
 
-## Install (Firefox)
+- A Firefox MAIN-world content script observes Fetch/XHR responses only when the request URL targets `/_/LabsTailwindUi/data/batchexecute`, includes `rpcids=Fxmvse`, and has an artifact source path.
+- It relays the response body to the isolated extension content script. It does not read or relay request headers, cookies, authorization values, or request bodies.
+- The parser unwraps the nested JSON serialization, locates `latestCompletion.cards`, and extracts text blocks from each card's `f` and `b` fields.
+- Duplicate and incomplete cards are excluded.
+- Image blocks are currently represented by their alt text. The image assets themselves are not embedded in exports yet.
 
-1. Download or clone this repository.
-2. Open `about:debugging#/runtime/this-firefox`.
-3. Select **Load Temporary Add-on** and choose `manifest.json`.
-4. Open or reload `https://notebook.google.com/`.
-5. Open the extension popup and select **Check active tab**.
+### Install (Firefox)
 
-## Diagnostic
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Select **Load Temporary Add-on** and choose `manifest.json`.
+3. Open or reload the target Notebook artifact page.
+4. Open the floating **HAB** panel. It should report the number of structured cards captured after the flashcard RPC response arrives.
+5. Export CSV/TSV or send notes to AnkiConnect.
 
-The popup reports:
-- active tab URL and whether it matches the configured host;
-- whether the content script responds to a ping;
-- the last content-script startup status.
-
-If the tab does not match, check that the address bar shows `https://notebook.google.com/`. If the content script does not respond, reload the tab after installing the extension.
-
-## Export
-
-The content script adds a floating **HAB** control. The initial exporter captures visible question/answer-like content heuristically and supports CSV/TSV download. DOM extraction is inherently sensitive to Notebook's changing page structure, so inspect exported cards before importing them.
+Firefox 128 or later is required for the MAIN-world content script.
 
 ## AnkiConnect
 
-AnkiConnect is optional. Install it in Anki and keep Anki running. The extension sends notes to `http://127.0.0.1:8765`. The extension does not send data to a remote server.
+AnkiConnect is optional. Install it in Anki and keep Anki running. The extension sends notes to `http://127.0.0.1:8765`, using the `Harrison::Inbox` deck by default.
 
-## Limitations
+## Limitations and verification status
 
-- This is an early MVP, not a verified integration with every Notebook page layout.
-- Firefox temporary add-ons are removed when Firefox is fully closed.
-- The target host is explicitly configured as `notebook.google.com`.
+- This is an experimental adapter for the observed `Fxmvse` response shape. Notebook may change its private RPC schema without notice.
+- The captured response shape has been inspected, but end-to-end browser capture and Anki import must still be tested on the user's Firefox installation.
+- Image binary retrieval and embedding are not implemented.
+- The extension does not send Notebook data to a remote server.
+- Temporary Firefox add-ons are removed when Firefox is fully closed.
