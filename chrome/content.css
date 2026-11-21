@@ -1,0 +1,48 @@
+#hab-root { all: initial; position: fixed; z-index: 2147483647; font-family: Arial, sans-serif; }
+#hab-root * { box-sizing: border-box; font-family: Arial, sans-serif; }
+#hab-toggle {
+  position: fixed; right: 18px; bottom: 18px; width: 48px; height: 48px;
+  border: 0; border-radius: 50%; color: #fff; background: #2457a7;
+  box-shadow: 0 2px 10px #0005; font-weight: 700; cursor: pointer;
+}
+#hab-panel {
+  position: fixed; right: 18px; bottom: 76px; width: 290px; padding: 14px;
+  border: 1px solid #dadce0; border-radius: 10px; color: #202124;
+  background: #fff; box-shadow: 0 4px 24px #0003; font-size: 13px;
+}
+#hab-panel[hidden] { display: none !important; }
+#hab-panel header { display: flex; justify-content: space-between; align-items: center; }
+#hab-panel header button { border: 0; background: transparent; font-size: 20px; cursor: pointer; }
+#hab-panel p { line-height: 1.4; }
+#hab-panel .hab-actions { display: grid; gap: 7px; }
+#hab-panel .hab-actions button {
+  padding: 8px; border: 0; border-radius: 6px; color: white;
+  background: #2457a7; cursor: pointer;
+}
+#hab-panel .hab-actions button:disabled { opacity: .45; cursor: not-allowed; }
+#hab-panel small { display: block; margin-top: 10px; color: #5f6368; line-height: 1.4; }
+#hab-panel #hab-preview {
+  max-height: 180px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 6px;
+  background: #f1f3f4;
+  color: #202124;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+#hab-panel .hab-deck-picker { margin: 12px 0; }
+#hab-panel .hab-deck-picker label { display: block; margin-bottom: 5px; font-weight: 700; }
+#hab-panel .hab-deck-row { display: flex; gap: 6px; }
+#hab-panel .hab-deck-row select { min-width: 0; flex: 1; padding: 7px; border: 1px solid #dadce0; border-radius: 6px; background: #fff; color: #202124; }
+#hab-panel .hab-deck-row button { width: 34px; border: 0; border-radius: 6px; background: #e8eaed; color: #202124; cursor: pointer; }
+#hab-panel .hab-deck-row button:disabled { opacity: .5; cursor: wait; }
+#hab-panel .hab-deck-picker small { margin-top: 5px; }
+
+#hab-panel .hab-deck-picker small.hab-error {
+  color: #b3261e;
+  font-weight: 700;
+}
