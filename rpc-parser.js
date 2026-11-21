@@ -88,8 +88,11 @@
   function extractCardsArray(cardsNode) {
     const found = [];
     const seen = new Set();
+    let rawCardRecords = 0;
+    let duplicateCount = 0;
     walk(cardsNode, node => {
       if (!Array.isArray(node)) return;
+      if (directValue(node, "card") !== undefined) rawCardRecords++;
       const frontNode = directValue(node, "f");
       const backNode = directValue(node, "b");
       if (frontNode === undefined || backNode === undefined) return;
@@ -97,16 +100,29 @@
       const back = collectBlocks(backNode);
       if (!front.text || !back.text) return;
       const key = front.text + "\u0000" + back.text;
-      if (seen.has(key)) return;
+      if (seen.has(key)) { duplicateCount++; return; }
       seen.add(key);
       found.push({
-        front: front.text + front.images.map(x => x.alt ? "\n[Image: " + x.alt + "]" : "\n[Image]").join(""),
-        back: back.text + back.images.map(x => x.alt ? "\n[Image: " + x.alt + "]" : "\n[Image]").join(""),
+        // collectBlocks already preserves image placeholders in block order.
+        // Do not append them a second time.
+        front: front.text,
+        back: back.text,
         images: [...front.images, ...back.images],
         status: firstString(directValue(node, "userStatus")) || ""
       });
     });
-    return found;
+    return { cards: found, rawCardRecords, duplicateCount };
+  }
+
+  function collectOrderIndices(orderNode) {
+    const indices = new Set();
+    walk(orderNode, node => {
+      if (Array.isArray(node) && node.length === 2 &&
+          node[0] === null && Number.isInteger(node[1])) {
+        indices.add(node[1]);
+      }
+    });
+    return [...indices].sort((a, b) => a - b);
   }
 
   function parseBatchedResponse(raw) {
@@ -168,21 +184,45 @@
     if (!artifactFound.length) throw new Error("latestCompletion was not found.");
 
     const allCards = [];
+    let rawCardRecords = 0;
+    let duplicateCount = 0;
     for (const completion of artifactFound) {
       const cardsNode = deepValue(completion, "cards");
-      if (cardsNode !== undefined) allCards.push(...extractCardsArray(cardsNode));
+      if (cardsNode === undefined) continue;
+      const extracted = extractCardsArray(cardsNode);
+      allCards.push(...extracted.cards);
+      rawCardRecords += extracted.rawCardRecords;
+      duplicateCount += extracted.duplicateCount;
     }
     const unique = [];
     const keys = new Set();
     for (const card of allCards) {
       const key = card.front + "\u0000" + card.back;
       if (!keys.has(key)) { keys.add(key); unique.push(card); }
+      else duplicateCount++;
     }
     if (!unique.length) throw new Error("No complete Front/Back cards found in latestCompletion.");
+
+    const orderNode = deepValue(decoded, "lastShownOrder");
+    const orderIndices = orderNode === undefined ? [] : collectOrderIndices(orderNode);
+    const orderGaps = [];
+    if (orderIndices.length > 1) {
+      const indexSet = new Set(orderIndices);
+      for (let i = orderIndices[0]; i <= orderIndices[orderIndices.length - 1]; i++) {
+        if (!indexSet.has(i)) orderGaps.push(i);
+      }
+    }
+
     return {
       artifactId: expectedArtifactId || "",
       cards: unique,
       total: unique.length,
+      rawCardRecords,
+      duplicateCount,
+      orderIndexCount: orderIndices.length,
+      orderIndexMin: orderIndices.length ? orderIndices[0] : null,
+      orderIndexMax: orderIndices.length ? orderIndices[orderIndices.length - 1] : null,
+      orderIndexGaps: orderGaps,
       imageCount: unique.reduce((n, c) => n + c.images.length, 0)
     };
   }
