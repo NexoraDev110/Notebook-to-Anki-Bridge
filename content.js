@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "0.2.1";
+  const VERSION = "0.2.2";
   const PREFIX = "[Harrison Anki Bridge]";
   const status = {
     loaded: true, version: VERSION, host: location.host,
@@ -24,7 +24,7 @@
     return undefined;
   });
 
-  const clean = value => String(value || "").replace(/\s+/g, " ").trim();
+  const clean = value => String(value || "").replace(/\\s+/g, " ").trim();
   const csvCell = value => '"' + String(value || "").replace(/"/g, '""') + '"';
 
   function downloadText(filename, text, mime) {
@@ -56,8 +56,7 @@
               extractionMeta.orderIndexMin + "–" + extractionMeta.orderIndexMax +
               (extractionMeta.orderIndexGaps?.length
                 ? "; " + extractionMeta.orderIndexGaps.length + " gaps"
-                : "") + ")" +
-              (extractionMeta.orderIndexGaps?.length ? " · total card count unconfirmed" : "")
+                : "") + ")"
             : "") +
           (extractionMeta?.duplicateCount
             ? " · " + extractionMeta.duplicateCount + " duplicate records skipped"
@@ -68,8 +67,8 @@
     }
     if (preview) {
       preview.textContent = cards.slice(0, 3).map((c, i) =>
-        (i + 1) + ". Q: " + c.front + "\nA: " + c.back
-      ).join("\n\n");
+        (i + 1) + ". Q: " + c.front + "\\nA: " + c.back
+      ).join("\\n\\n");
     }
   }
 
@@ -77,7 +76,7 @@
     try {
       const url = new URL(requestUrl, location.href);
       const sourcePath = url.searchParams.get("source-path") || "";
-      const match = sourcePath.match(/\/artifact\/([a-f0-9-]{36})/i);
+      const match = sourcePath.match(/\\/artifact\\/([a-f0-9-]{36})/i);
       const requestedId = match ? match[1] : "";
       const result = window.HABRpcParser.parseResponse(raw, requestedId);
       if (requestedId && result.artifactId && requestedId !== result.artifactId) {
@@ -125,7 +124,7 @@
     root.innerHTML = `
       <button id="hab-toggle" type="button" title="Harrison Anki Bridge">HAB</button>
       <section id="hab-panel" hidden>
-        <header><strong>Harrison Anki Bridge 0.2.1</strong><button id="hab-close" type="button">×</button></header>
+        <header><strong>Harrison Anki Bridge 0.2.2</strong><button id="hab-close" type="button">×</button></header>
         <p id="hab-count">Waiting for the Notebook flashcards RPC response.</p>
         <pre id="hab-preview"></pre>
         <div class="hab-actions">
@@ -145,12 +144,12 @@
     root.querySelector("#hab-csv").addEventListener("click", () => {
       const rows = [["Front", "Back"], ...cards.map(c => [c.front, c.back])];
       downloadText("harrison-anki-bridge.csv",
-        rows.map(row => row.map(csvCell).join(",")).join("\r\n"), "text/csv");
+        rows.map(row => row.map(csvCell).join(",")).join("\\r\\n"), "text/csv");
     });
     root.querySelector("#hab-tsv").addEventListener("click", () => {
       const rows = [["Front", "Back"], ...cards.map(c => [c.front, c.back])];
       downloadText("harrison-anki-bridge.tsv",
-        rows.map(row => row.map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t")).join("\r\n"),
+        rows.map(row => row.map(v => String(v || "").replace(/[\\t\\r\\n]+/g, " ")).join("\\t")).join("\\r\\n"),
         "text/tab-separated-values");
     });
     root.querySelector("#hab-anki").addEventListener("click", async () => {
