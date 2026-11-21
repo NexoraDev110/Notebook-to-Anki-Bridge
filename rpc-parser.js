@@ -154,11 +154,8 @@
     }
     const outer = parseBatchedResponse(raw);
     const decoded = decodeNested(outer);
-    let rpcFound = false;
-    walk(decoded, node => {
-      if (Array.isArray(node) && node[0] === "Fxmvse") rpcFound = true;
-    });
-    if (!rpcFound) throw new Error("Fxmvse RPC marker was not found.");
+    // Fxmvse identifies the request in the batchexecute URL. Google does not
+    // necessarily echo that RPC ID in the response body, so do not require it here.
     if (expectedArtifactId && !JSON.stringify(decoded).includes(expectedArtifactId)) {
       throw new Error("The RPC response does not match the active artifact ID.");
     }
