@@ -2,7 +2,11 @@
 
 A cross-browser extension for Firefox and Chrome that captures flashcards from supported Google Notebook artifact pages and exports them to Anki.
 
-## Version 0.3.2
+## Version 0.3.3
+
+This release adds a Chrome Manifest V3 build in the `chrome/` directory. The Chrome build uses a service worker and the Chrome Extensions API; the Firefox build remains at the repository root.
+
+## Previous version 0.3.2
 
 This release clears the missing-destination-deck warning as soon as an existing deck is selected.
 
@@ -29,7 +33,7 @@ This does not imply compatibility with every product or website called NotebookL
 
 ## How extraction works
 
-- A Firefox MAIN-world content script observes only the two allowlisted Fetch/XHR RPCs described above.
+- A browser MAIN-world content script observes only the two allowlisted Fetch/XHR RPCs described above.
 - It relays only the response body and request URL to the isolated extension content script. It does not read or relay request headers, cookies, authorization values, or request bodies.
 - The parser unwraps nested JSON and extracts text blocks from flashcard Front and Back fields.
 - Duplicate and incomplete cards are excluded.
