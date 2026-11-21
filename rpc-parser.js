@@ -124,16 +124,12 @@
 
     // Some responses contain several length-prefixed chunks on one stream.
     // Walk the stream and extract the JSON text following each numeric prefix.
-    const framed = /(?:^|\n)\s*\d+\s*\n/g;
-    let match;
-    while ((match = framed.exec(cleaned)) !== null) {
-      const start = framed.lastIndex;
-      const next = framed.exec(cleaned);
-      const end = next ? next.index : cleaned.length;
+    const framed = [...cleaned.matchAll(/(?:^|\n)\s*\d+\s*\n/g)];
+    for (let i = 0; i < framed.length; i++) {
+      const start = framed[i].index + framed[i][0].length;
+      const end = i + 1 < framed.length ? framed[i + 1].index : cleaned.length;
       const chunk = cleaned.slice(start, end).trim();
       if (chunk) candidates.push(chunk);
-      if (next) framed.lastIndex = next.index;
-      else break;
     }
 
     const parsed = [];
