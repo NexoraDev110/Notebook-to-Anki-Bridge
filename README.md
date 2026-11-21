@@ -60,6 +60,10 @@ Firefox 128 or later is required for MAIN-world content scripts.
 
 Chrome 111 or later is required for MAIN-world content scripts. The Chrome build uses a Manifest V3 service worker and the Chrome Extensions API.
 
+## Privacy
+
+See [PRIVACY.md](PRIVACY.md) for the extension's data handling and privacy policy.
+
 ## AnkiConnect
 
 AnkiConnect is optional. Install it in Anki and keep Anki running. The extension sends notes to `http://127.0.0.1:8765`.
