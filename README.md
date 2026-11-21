@@ -14,14 +14,16 @@ The current extractor is an adapter for the observed Google Notebook web applica
 
 - Host: `https://notebook.google.com`
 - RPC: `/_/LabsTailwindUi/data/batchexecute`
-- RPC ID: `Fxmvse`
-- The request must include an artifact `source-path`.
+- Fullscreen artifact RPC: `Fxmvse` (requires an artifact `source-path`).
+- Embedded/right-panel RPC: `ulBSjf` (observed completion payload containing `latestCompletion.cards`).
+
+Both adapters use the same structured Front/Back parser. The embedded-panel adapter is based on an observed response schema and should be treated as experimental until verified against multiple notebooks and reload/navigation scenarios.
 
 This does not imply compatibility with every product or website called NotebookLM/Notebook. Other providers and changed RPC schemas require separate adapters.
 
 ## How extraction works
 
-- A Firefox MAIN-world content script observes matching Fetch/XHR responses.
+- A Firefox MAIN-world content script observes only the two allowlisted Fetch/XHR RPCs described above.
 - It relays only the response body and request URL to the isolated extension content script. It does not read or relay request headers, cookies, authorization values, or request bodies.
 - The parser unwraps nested JSON and extracts text blocks from flashcard Front and Back fields.
 - Duplicate and incomplete cards are excluded.
@@ -50,7 +52,7 @@ AnkiConnect is optional. Install it in Anki and keep Anki running. The extension
 ## Limitations
 
 - The extractor depends on a private/undocumented Google Notebook RPC schema and may need updates if Google changes it.
-- Compatibility is currently limited to the Google Notebook web RPC described above.
+- Compatibility is currently limited to the two observed Google Notebook web RPCs described above; embedded-panel support is experimental.
 - Image binary retrieval and embedding are not implemented.
 - The extension does not send Notebook content to a remote server.
 - Temporary Firefox add-ons are removed when Firefox is fully closed.
