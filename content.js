@@ -1,15 +1,9 @@
 "use strict";
 
 (() => {
-  const VERSION = "0.2.4";
-  const PREFIX = "[Harrison Anki Bridge]";
-  const status = {
-    loaded: true, version: VERSION, host: location.host,
-    href: location.href, timestamp: new Date().toISOString()
-  };
-
-  browser.storage.local.set({ habLastContentStatus: status }).catch(() => {});
-  console.info(PREFIX, "content script loaded", status);
+  const VERSION = browser.runtime.getManifest().version;
+  const PREFIX = "[Notebook to Anki Bridge]";
+  console.info(PREFIX, "content script loaded", { version: VERSION, host: location.host });
 
   let cards = [];
   let artifactId = "";
@@ -17,14 +11,7 @@
   let extractionMeta = null;
   let captureError = "";
 
-  browser.runtime.onMessage.addListener((message) => {
-    if (message?.type === "HAB_PING") {
-      return Promise.resolve({ ok: true, version: VERSION, host: location.host });
-    }
-    return undefined;
-  });
-
-  const clean = value => String(value || "").replace(/\s+/g, " ").trim();
+const clean = value => String(value || "").replace(/\s+/g, " ").trim();
   const csvCell = value => '"' + String(value || "").replace(/"/g, '""') + '"';
 
   function downloadText(filename, text, mime) {
@@ -41,7 +28,7 @@
     const count = document.querySelector("#hab-count");
     const preview = document.querySelector("#hab-preview");
     const enabled = cards.length > 0;
-    for (const selector of ["#hab-csv", "#hab-tsv", "#hab-anki-test", "#hab-anki-all"]) {
+    for (const selector of ["#hab-csv", "#hab-tsv", "#hab-anki-all"]) {
       const button = document.querySelector(selector);
       if (button) button.disabled = !enabled;
     }
@@ -85,7 +72,7 @@
       cards = result.cards.map(card => ({
         front: card.front,
         back: card.back,
-        tags: ["Harrison", "Notebook"]
+        tags: ["Notebook", "AnkiBridge"]
       }));
       artifactId = requestedId;
       imageCount = result.imageCount;
@@ -122,9 +109,9 @@
     const root = document.createElement("div");
     root.id = "hab-root";
     root.innerHTML = `
-      <button id="hab-toggle" type="button" title="Harrison Anki Bridge">HAB</button>
+      <button id="hab-toggle" type="button" title="Notebook to Anki Bridge">NAB</button>
       <section id="hab-panel" hidden>
-        <header><strong>Harrison Anki Bridge 0.2.4</strong><button id="hab-close" type="button">×</button></header>
+        <header><strong>Notebook to Anki Bridge v${VERSION}</strong><button id="hab-close" type="button">×</button></header>
         <p id="hab-count">Waiting for the Notebook flashcards RPC response.</p>
         <pre id="hab-preview"></pre>
         <div class="hab-deck-picker">
@@ -140,8 +127,7 @@
         <div class="hab-actions">
           <button id="hab-csv" type="button" disabled>Export CSV</button>
           <button id="hab-tsv" type="button" disabled>Export TSV</button>
-          <button id="hab-anki-test" type="button" disabled>Test first card in Anki</button>
-          <button id="hab-anki-all" type="button" disabled>Send all cards to Anki</button>
+<button id="hab-anki-all" type="button" disabled>Send all cards to Anki</button>
         </div>
         <small>Structured RPC extraction. Images are currently represented by their alt text, not embedded.</small>
       </section>`;
@@ -199,37 +185,29 @@
     root.querySelector("#hab-close").addEventListener("click", () => { panel.hidden = true; });
     root.querySelector("#hab-csv").addEventListener("click", () => {
       const rows = [["Front", "Back"], ...cards.map(c => [c.front, c.back])];
-      downloadText("harrison-anki-bridge.csv",
+      downloadText("notebook-anki-bridge.csv",
         rows.map(row => row.map(csvCell).join(",")).join("\r\n"), "text/csv");
     });
     root.querySelector("#hab-tsv").addEventListener("click", () => {
       const rows = [["Front", "Back"], ...cards.map(c => [c.front, c.back])];
-      downloadText("harrison-anki-bridge.tsv",
+      downloadText("notebook-anki-bridge.tsv",
         rows.map(row => row.map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t")).join("\r\n"),
         "text/tab-separated-values");
     });
-    async function sendToAnki(testOnly) {
-      const valid = cards.filter(c => clean(c.front) && clean(c.back));
-      const selected = testOnly ? valid.slice(0, 1) : valid;
+    async function sendToAnki() {
+      const selected = cards.filter(c => clean(c.front) && clean(c.back));
       if (!selected.length) return;
-      if (!testOnly && !window.confirm("Send " + selected.length + " cards to Anki? Existing notes and repeated Front fields will be skipped.")) return;
-
+      if (!window.confirm("Send " + selected.length + " cards to Anki? Existing notes and repeated Front fields will be skipped.")) return;
       const deckName = deckSelect.value;
       if (!deckName) {
         deckStatus.textContent = "Select an existing Anki deck before importing.";
         return;
       }
-      const testButton = root.querySelector("#hab-anki-test");
       const allButton = root.querySelector("#hab-anki-all");
-      testButton.disabled = true;
       allButton.disabled = true;
       root.querySelector("#hab-count").textContent = "Checking AnkiConnect and sending " + selected.length + " note(s)…";
       try {
-        const response = await browser.runtime.sendMessage({
-          type: "HAB_ANKI_ADD",
-          deckName,
-          notes: selected
-        });
+        const response = await browser.runtime.sendMessage({ type: "HAB_ANKI_ADD", deckName, notes: selected });
         if (!response) throw new Error("No response from the background script.");
         const summary = [
           "Added: " + (response.added || 0),
@@ -245,12 +223,10 @@
       } catch (error) {
         root.querySelector("#hab-count").textContent = "AnkiConnect error: " + clean(error.message || error);
       } finally {
-        testButton.disabled = false;
         allButton.disabled = false;
       }
     }
-    root.querySelector("#hab-anki-test").addEventListener("click", () => sendToAnki(true));
-    root.querySelector("#hab-anki-all").addEventListener("click", () => sendToAnki(false));
+    root.querySelector("#hab-anki-all").addEventListener("click", sendToAnki);
     renderStatus();
     loadDecks();
   }
