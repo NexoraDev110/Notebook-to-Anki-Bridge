@@ -122,6 +122,9 @@
       if (Array.isArray(node) && node[0] === "Fxmvse") rpcFound = true;
     });
     if (!rpcFound) throw new Error("Fxmvse RPC marker was not found.");
+    if (expectedArtifactId && !JSON.stringify(decoded).includes(expectedArtifactId)) {
+      throw new Error("The RPC response does not match the active artifact ID.");
+    }
 
     const artifactFound = [];
     walk(decoded, node => {
