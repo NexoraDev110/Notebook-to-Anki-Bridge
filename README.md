@@ -8,6 +8,8 @@ This release highlights the missing-destination-deck warning in red. It also rem
 
 The extension is no longer branded or configured specifically for Harrison. It uses generic Notebook/Anki labels and tags, and lets the user select any existing Anki deck.
 
+> **Reinstall note:** This release uses a new generic Firefox extension ID. If you previously loaded an earlier build temporarily, remove that old temporary add-on and load this release again from `manifest.json`.
+
 ## Supported source
 
 The current extractor is an adapter for the observed Google Notebook web application RPC:
