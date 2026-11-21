@@ -131,7 +131,7 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
           <button id="hab-tsv" type="button" disabled>Export TSV</button>
 <button id="hab-anki-all" type="button" disabled>Send all cards to Anki</button>
         </div>
-        <small>Structured RPC extraction. Images are currently represented by their alt text, not embedded.</small>
+        <small>Flashcard response data is processed locally and is not sent to the developer. Anki import happens only when you click Send all cards to Anki. Images are represented by alt text, not embedded.</small>
       </section>`;
     document.documentElement.appendChild(root);
     const panel = root.querySelector("#hab-panel");
