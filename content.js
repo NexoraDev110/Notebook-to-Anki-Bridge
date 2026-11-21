@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "0.2.0";
+  const VERSION = "0.2.1";
   const PREFIX = "[Harrison Anki Bridge]";
   const status = {
     loaded: true, version: VERSION, host: location.host,
@@ -125,7 +125,7 @@
     root.innerHTML = `
       <button id="hab-toggle" type="button" title="Harrison Anki Bridge">HAB</button>
       <section id="hab-panel" hidden>
-        <header><strong>Harrison Anki Bridge 0.2.0</strong><button id="hab-close" type="button">×</button></header>
+        <header><strong>Harrison Anki Bridge 0.2.1</strong><button id="hab-close" type="button">×</button></header>
         <p id="hab-count">Waiting for the Notebook flashcards RPC response.</p>
         <pre id="hab-preview"></pre>
         <div class="hab-actions">
