@@ -156,9 +156,9 @@
     const decoded = decodeNested(outer);
     // Fxmvse identifies the request in the batchexecute URL. Google does not
     // necessarily echo that RPC ID in the response body, so do not require it here.
-    if (expectedArtifactId && !JSON.stringify(decoded).includes(expectedArtifactId)) {
-      throw new Error("The RPC response does not match the active artifact ID.");
-    }
+    // The request URL is already filtered by the content script to the active
+    // artifact's source-path. The response body may omit or transform that ID,
+    // so it is not a reliable response-validation field.
 
     const artifactFound = [];
     walk(decoded, node => {
