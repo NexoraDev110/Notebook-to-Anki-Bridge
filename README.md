@@ -6,7 +6,7 @@ A Firefox extension that captures flashcards from supported Google Notebook arti
 
 This release highlights the missing-destination-deck warning in red. It also removes the one-card test action and active-tab diagnostic popup. Clicking the extension icon opens an information popup that reads the installed version directly from the extension manifest.
 
-The extension is no longer branded or configured specifically for Harrison. It uses generic Notebook/Anki labels and tags, and lets the user select any existing Anki deck.
+The extension uses generic Notebook/Anki labels and tags, and lets the user select any existing Anki deck.
 
 > **Reinstall note:** This release uses a new generic Firefox extension ID. If you previously loaded an earlier build temporarily, remove that old temporary add-on and load this release again from `manifest.json`.
 
