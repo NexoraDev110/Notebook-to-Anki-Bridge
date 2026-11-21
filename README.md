@@ -2,7 +2,7 @@
 
 Firefox extension for exporting Google Notebook flashcards to Anki.
 
-## Version 0.2.2 (experimental)
+## Version 0.2.3 (experimental)
 
 This version replaces DOM text heuristics with a dedicated adapter for the observed `Fxmvse` RPC response from `https://notebook.google.com`.
 
@@ -21,7 +21,7 @@ This version replaces DOM text heuristics with a dedicated adapter for the obser
 2. Select **Load Temporary Add-on** and choose `manifest.json`.
 3. Open or reload the target Notebook artifact page.
 4. Open the floating **HAB** panel. It should report the number of structured cards captured after the flashcard RPC response arrives.
-5. Export CSV/TSV or send notes to AnkiConnect.
+5. Export CSV/TSV, test one note in Anki, or confirm a full-batch AnkiConnect import.
 
 Firefox 128 or later is required for the MAIN-world content script.
 
@@ -34,5 +34,7 @@ AnkiConnect is optional. Install it in Anki and keep Anki running. The extension
 - This is an experimental adapter for the observed `Fxmvse` response shape. Notebook may change its private RPC schema without notice.
 - The captured response shape has been inspected, but end-to-end browser capture and Anki import must still be tested on the user's Firefox installation.
 - Image binary retrieval and embedding are not implemented.
+- AnkiConnect import validates the target deck and Basic note type, checks candidates with `canAddNotes`, skips repeated Front fields within the current batch, and uses `addNotes` for batch insertion.
+- The panel offers a one-note test action and a separately confirmed full-batch action. Existing or otherwise non-addable notes are reported as skipped; no automatic overwrite is performed.
 - The extension does not send Notebook data to a remote server.
 - Temporary Firefox add-ons are removed when Firefox is fully closed.
