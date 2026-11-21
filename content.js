@@ -143,6 +143,8 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
       refreshButton.disabled = true;
       deckSelect.disabled = true;
       deckStatus.textContent = "Loading existing decks from Anki…";
+      deckStatus.classList.remove("hab-error");
+      deckStatus.removeAttribute("role");
       try {
         const response = await browser.runtime.sendMessage({ type: "HAB_ANKI_GET_DECKS" });
         if (!response || !response.ok || !Array.isArray(response.decks)) {
@@ -202,6 +204,8 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
       const deckName = deckSelect.value;
       if (!deckName) {
         deckStatus.textContent = "Select an existing Anki deck before importing.";
+        deckStatus.classList.add("hab-error");
+        deckStatus.setAttribute("role", "alert");
         return;
       }
       const allButton = root.querySelector("#hab-anki-all");
