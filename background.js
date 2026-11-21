@@ -1,10 +1,7 @@
 "use strict";
 
 browser.runtime.onMessage.addListener(async (message) => {
-  if (!message || message.type !== "HAB_ANKI_ADD") return undefined;
-
-  const sourceNotes = Array.isArray(message.notes) ? message.notes : [];
-  if (!sourceNotes.length) return { ok: false, error: "No notes supplied." };
+  if (!message) return undefined;
 
   async function request(action, params = {}) {
     const response = await fetch("http://127.0.0.1:8765", {
@@ -18,7 +15,23 @@ browser.runtime.onMessage.addListener(async (message) => {
     return data.result;
   }
 
-  const deckName = sourceNotes[0].deckName || "Harrison::Inbox";
+  if (message.type === "HAB_ANKI_GET_DECKS") {
+    try {
+      const decks = await request("deckNames");
+      if (!Array.isArray(decks)) throw new Error("AnkiConnect returned an invalid deck list.");
+      return { ok: true, decks };
+    } catch (error) {
+      return { ok: false, error: String(error.message || error) };
+    }
+  }
+
+  if (message.type !== "HAB_ANKI_ADD") return undefined;
+
+  const sourceNotes = Array.isArray(message.notes) ? message.notes : [];
+  if (!sourceNotes.length) return { ok: false, error: "No notes supplied." };
+
+  const deckName = String(message.deckName || "").trim();
+  if (!deckName) return { ok: false, error: "Select an existing destination deck first.", added: 0, skippedExisting: 0, skippedInBatch: 0, invalid: 0, failed: sourceNotes.length };
   const modelName = "Basic";
   const results = sourceNotes.map((note, index) => ({
     index,
@@ -32,7 +45,7 @@ browser.runtime.onMessage.addListener(async (message) => {
       request("modelNames")
     ]);
     if (!Array.isArray(decks) || !decks.includes(deckName)) {
-      throw new Error('Deck "' + deckName + '" does not exist. Create it in Anki first.');
+      throw new Error('Selected deck "' + deckName + '" no longer exists. Refresh the deck list and select an existing deck.');
     }
     if (!Array.isArray(models) || !models.includes(modelName)) {
       throw new Error('Note type "' + modelName + '" does not exist in Anki.');
@@ -60,7 +73,7 @@ browser.runtime.onMessage.addListener(async (message) => {
       }
       seenFronts.add(key);
       candidates.push({
-        deckName: note.deckName || deckName,
+        deckName,
         modelName,
         fields: { Front: front, Back: back },
         tags: Array.isArray(note.tags) ? note.tags : ["Harrison", "Notebook"]
