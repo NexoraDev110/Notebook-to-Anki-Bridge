@@ -2,7 +2,7 @@
 
 Firefox extension for exporting Google Notebook flashcards to Anki.
 
-## Version 0.2.3 (experimental)
+## Version 0.2.4 (experimental)
 
 This version replaces DOM text heuristics with a dedicated adapter for the observed `Fxmvse` RPC response from `https://notebook.google.com`.
 
@@ -27,7 +27,7 @@ Firefox 128 or later is required for the MAIN-world content script.
 
 ## AnkiConnect
 
-AnkiConnect is optional. Install it in Anki and keep Anki running. The extension sends notes to `http://127.0.0.1:8765`, using the `Harrison::Inbox` deck by default.
+AnkiConnect is optional. Install it in Anki and keep Anki running. The extension sends notes to `http://127.0.0.1:8765`, and requires the user to select an existing destination deck in the panel before importing. It does not create decks automatically. All notes in one import are sent to the selected deck.
 
 ## Limitations and verification status
 
@@ -35,6 +35,7 @@ AnkiConnect is optional. Install it in Anki and keep Anki running. The extension
 - The captured response shape has been inspected, but end-to-end browser capture and Anki import must still be tested on the user's Firefox installation.
 - Image binary retrieval and embedding are not implemented.
 - AnkiConnect import validates the target deck and Basic note type, checks candidates with `canAddNotes`, skips repeated Front fields within the current batch, and uses `addNotes` for batch insertion.
+- The panel loads existing decks from AnkiConnect and requires an explicit destination selection. The selected deck is revalidated before import; no deck is created automatically.
 - The panel offers a one-note test action and a separately confirmed full-batch action. Existing or otherwise non-addable notes are reported as skipped; no automatic overwrite is performed.
 - The extension does not send Notebook data to a remote server.
 - Temporary Firefox add-ons are removed when Firefox is fully closed.
