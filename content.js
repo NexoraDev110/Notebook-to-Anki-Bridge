@@ -24,7 +24,7 @@
     return undefined;
   });
 
-  const clean = value => String(value || "").replace(/\\s+/g, " ").trim();
+  const clean = value => String(value || "").replace(/\s+/g, " ").trim();
   const csvCell = value => '"' + String(value || "").replace(/"/g, '""') + '"';
 
   function downloadText(filename, text, mime) {
@@ -67,8 +67,8 @@
     }
     if (preview) {
       preview.textContent = cards.slice(0, 3).map((c, i) =>
-        (i + 1) + ". Q: " + c.front + "\\nA: " + c.back
-      ).join("\\n\\n");
+        (i + 1) + ". Q: " + c.front + "\nA: " + c.back
+      ).join("\n\n");
     }
   }
 
@@ -76,7 +76,7 @@
     try {
       const url = new URL(requestUrl, location.href);
       const sourcePath = url.searchParams.get("source-path") || "";
-      const match = sourcePath.match(/\\/artifact\\/([a-f0-9-]{36})/i);
+      const match = sourcePath.match(/\/artifact\/([a-f0-9-]{36})/i);
       const requestedId = match ? match[1] : "";
       const result = window.HABRpcParser.parseResponse(raw, requestedId);
       if (requestedId && result.artifactId && requestedId !== result.artifactId) {
@@ -144,12 +144,12 @@
     root.querySelector("#hab-csv").addEventListener("click", () => {
       const rows = [["Front", "Back"], ...cards.map(c => [c.front, c.back])];
       downloadText("harrison-anki-bridge.csv",
-        rows.map(row => row.map(csvCell).join(",")).join("\\r\\n"), "text/csv");
+        rows.map(row => row.map(csvCell).join(",")).join("\r\n"), "text/csv");
     });
     root.querySelector("#hab-tsv").addEventListener("click", () => {
       const rows = [["Front", "Back"], ...cards.map(c => [c.front, c.back])];
       downloadText("harrison-anki-bridge.tsv",
-        rows.map(row => row.map(v => String(v || "").replace(/[\\t\\r\\n]+/g, " ")).join("\\t")).join("\\r\\n"),
+        rows.map(row => row.map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t")).join("\r\n"),
         "text/tab-separated-values");
     });
     root.querySelector("#hab-anki").addEventListener("click", async () => {
