@@ -48,6 +48,20 @@
     if (count) {
       count.textContent = enabled
         ? cards.length + " structured cards captured" +
+          (extractionMeta?.rawCardRecords
+            ? " · " + extractionMeta.rawCardRecords + " source card records"
+            : "") +
+          (extractionMeta?.orderIndexCount
+            ? " · display order: " + extractionMeta.orderIndexCount + " indices (" +
+              extractionMeta.orderIndexMin + "–" + extractionMeta.orderIndexMax +
+              (extractionMeta.orderIndexGaps?.length
+                ? "; " + extractionMeta.orderIndexGaps.length + " gaps"
+                : "") + ")" +
+              (extractionMeta.orderIndexGaps?.length ? " · total card count unconfirmed" : "")
+            : "") +
+          (extractionMeta?.duplicateCount
+            ? " · " + extractionMeta.duplicateCount + " duplicate records skipped"
+            : "") +
           (imageCount ? " · " + imageCount + " image references (alt text only)" : "") +
           (artifactId ? " · Artifact " + artifactId : "")
         : captureError || "Waiting for the Notebook flashcards RPC response. Reload the artifact page if needed.";
