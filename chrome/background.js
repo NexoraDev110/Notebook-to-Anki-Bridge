@@ -90,7 +90,7 @@ async function handleMessage(message) {
         results[i].status = "invalid";
         continue;
       }
-      const key = front.normalize("NFKC").replace(/\\s+/g, " ").toLocaleLowerCase();
+      const key = front.normalize("NFKC").replace(/\s+/g, " ").toLocaleLowerCase();
       if (seenFronts.has(key)) {
         results[i].status = "duplicate_in_batch";
         continue;
