@@ -76,7 +76,7 @@ browser.runtime.onMessage.addListener(async (message) => {
         deckName,
         modelName,
         fields: { Front: front, Back: back },
-        tags: Array.isArray(note.tags) ? note.tags : ["Harrison", "Notebook"]
+        tags: Array.isArray(note.tags) ? note.tags : ["Notebook", "AnkiBridge"]
       });
       candidateIndexes.push(i);
     }
