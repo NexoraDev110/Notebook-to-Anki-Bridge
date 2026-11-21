@@ -108,31 +108,68 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
 
   function ensureUI() {
     if (document.getElementById("hab-root") || !document.documentElement) return;
-    const root = document.createElement("div");
-    root.id = "hab-root";
-    root.innerHTML = `
-      <button id="hab-toggle" type="button" title="Notebook to Anki Bridge">NAB</button>
-      <section id="hab-panel" hidden>
-        <header><strong>Notebook to Anki Bridge v${VERSION}</strong><button id="hab-close" type="button">×</button></header>
-        <p id="hab-count">Waiting for the Notebook flashcards RPC response.</p>
-        <pre id="hab-preview"></pre>
-        <div class="hab-deck-picker">
-          <label for="hab-deck">Anki destination deck</label>
-          <div class="hab-deck-row">
-            <select id="hab-deck" disabled>
-              <option value="">Load decks from Anki…</option>
-            </select>
-            <button id="hab-deck-refresh" type="button">↻</button>
-          </div>
-          <small id="hab-deck-status">Connect to AnkiConnect to load your existing decks.</small>
-        </div>
-        <div class="hab-actions">
-          <button id="hab-csv" type="button" disabled>Export CSV</button>
-          <button id="hab-tsv" type="button" disabled>Export TSV</button>
-<button id="hab-anki-all" type="button" disabled>Send all cards to Anki</button>
-        </div>
-        <small>Structured RPC extraction. Images are currently represented by their alt text, not embedded.</small>
-      </section>`;
+    const makeElement = (tag, id, text) => {
+      const element = document.createElement(tag);
+      if (id) element.id = id;
+      if (text !== undefined) element.textContent = text;
+      return element;
+    };
+
+    const root = makeElement("div", "hab-root");
+    const toggle = makeElement("button", "hab-toggle", "NAB");
+    toggle.type = "button";
+    toggle.title = "Notebook to Anki Bridge";
+
+    const panel = makeElement("section", "hab-panel");
+    panel.hidden = true;
+
+    const header = makeElement("header");
+    const heading = makeElement("strong", null, "Notebook to Anki Bridge v" + VERSION);
+    const closeButton = makeElement("button", "hab-close", "×");
+    closeButton.type = "button";
+    header.append(heading, closeButton);
+
+    const count = makeElement("p", "hab-count",
+      "Waiting for the Notebook flashcards RPC response.");
+    const preview = makeElement("pre", "hab-preview");
+
+    const deckPicker = makeElement("div");
+    deckPicker.className = "hab-deck-picker";
+    const deckLabel = makeElement("label", null, "Anki destination deck");
+    deckLabel.htmlFor = "hab-deck";
+
+    const deckRow = makeElement("div");
+    deckRow.className = "hab-deck-row";
+    const deckSelect = makeElement("select", "hab-deck");
+    deckSelect.disabled = true;
+    const initialOption = makeElement("option", null, "Load decks from Anki…");
+    initialOption.value = "";
+    deckSelect.appendChild(initialOption);
+    const refreshButton = makeElement("button", "hab-deck-refresh", "↻");
+    refreshButton.type = "button";
+    deckRow.append(deckSelect, refreshButton);
+
+    const deckStatus = makeElement("small", "hab-deck-status",
+      "Connect to AnkiConnect to load your existing decks.");
+    deckPicker.append(deckLabel, deckRow, deckStatus);
+
+    const actions = makeElement("div");
+    actions.className = "hab-actions";
+    const csvButton = makeElement("button", "hab-csv", "Export CSV");
+    csvButton.type = "button";
+    csvButton.disabled = true;
+    const tsvButton = makeElement("button", "hab-tsv", "Export TSV");
+    tsvButton.type = "button";
+    tsvButton.disabled = true;
+    const ankiButton = makeElement("button", "hab-anki-all", "Send all cards to Anki");
+    ankiButton.type = "button";
+    ankiButton.disabled = true;
+    actions.append(csvButton, tsvButton, ankiButton);
+
+    const footer = makeElement("small", null, "Structured RPC extraction. Images are currently represented by their alt text, not embedded.");
+
+    panel.append(header, count, preview, deckPicker, actions, footer);
+    root.append(toggle, panel);
     document.documentElement.appendChild(root);
     const panel = root.querySelector("#hab-panel");
     const deckSelect = root.querySelector("#hab-deck");
