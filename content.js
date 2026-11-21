@@ -14,6 +14,7 @@
   let cards = [];
   let artifactId = "";
   let imageCount = 0;
+  let extractionMeta = null;
   let captureError = "";
 
   browser.runtime.onMessage.addListener((message) => {
@@ -75,6 +76,14 @@
       }));
       artifactId = requestedId;
       imageCount = result.imageCount;
+      extractionMeta = {
+        rawCardRecords: result.rawCardRecords || 0,
+        duplicateCount: result.duplicateCount || 0,
+        orderIndexCount: result.orderIndexCount || 0,
+        orderIndexMin: result.orderIndexMin,
+        orderIndexMax: result.orderIndexMax,
+        orderIndexGaps: result.orderIndexGaps || []
+      };
       captureError = "";
       renderStatus();
       console.info(PREFIX, "captured structured cards", {
