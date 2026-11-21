@@ -99,8 +99,10 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
   window.addEventListener("message", event => {
     if (event.source !== window || event.origin !== location.origin) return;
     const data = event.data;
-    if (!data || data.source !== "HARRISON_ANKI_BRIDGE" ||
-        data.type !== "FXMVSE_RESPONSE" || typeof data.responseText !== "string") return;
+    if (!data || data.source !== "NOTEBOOK_TO_ANKI_BRIDGE" ||
+        data.type !== "NOTEBOOK_RPC_RESPONSE" ||
+        !["Fxmvse", "ulBSjf"].includes(data.rpcId) ||
+        typeof data.responseText !== "string") return;
     capture(data.responseText, data.requestUrl || location.href);
   });
 
