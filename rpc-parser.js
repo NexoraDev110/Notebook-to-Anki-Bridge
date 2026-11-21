@@ -109,15 +109,54 @@
     return found;
   }
 
+  function parseBatchedResponse(raw) {
+    const cleaned = raw.replace(/^\)\]\}'\s*/, "").trim();
+    const candidates = [cleaned];
+
+    // Google batchexecute commonly frames each JSON chunk with a decimal
+    // byte/character count on its own line. Parse each framed payload separately.
+    const lines = cleaned.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line || /^\d+$/.test(line)) continue;
+      candidates.push(line);
+    }
+
+    // Some responses contain several length-prefixed chunks on one stream.
+    // Walk the stream and extract the JSON text following each numeric prefix.
+    const framed = /(?:^|\n)\s*\d+\s*\n/g;
+    let match;
+    while ((match = framed.exec(cleaned)) !== null) {
+      const start = framed.lastIndex;
+      const next = framed.exec(cleaned);
+      const end = next ? next.index : cleaned.length;
+      const chunk = cleaned.slice(start, end).trim();
+      if (chunk) candidates.push(chunk);
+      if (next) framed.lastIndex = next.index;
+      else break;
+    }
+
+    const parsed = [];
+    const seen = new Set();
+    for (const candidate of candidates) {
+      if (seen.has(candidate)) continue;
+      seen.add(candidate);
+      try {
+        const value = JSON.parse(candidate);
+        parsed.push(value);
+      } catch (_) {}
+    }
+    if (!parsed.length) {
+      throw new Error("Unrecognized batchexecute framing: no JSON payload chunk could be parsed.");
+    }
+    return parsed.length === 1 ? parsed[0] : parsed;
+  }
+
   function parseResponse(raw, expectedArtifactId) {
     if (typeof raw !== "string" || raw.length > 8_000_000) {
       throw new Error("Invalid or oversized RPC response.");
     }
-    const cleaned = raw.replace(/^\)\]\}'\s*/, "").trim();
-    let outer;
-    try { outer = JSON.parse(cleaned); }
-    catch (_) { throw new Error("RPC response is not valid JSON."); }
-
+    const outer = parseBatchedResponse(raw);
     const decoded = decodeNested(outer);
     let rpcFound = false;
     walk(decoded, node => {
