@@ -25,7 +25,7 @@ Privacy:
 - See the linked Privacy Policy for full details.
 
 Requirements and limitations:
-- Chrome 111 or later.
+- Chrome 111 or later. The current Chrome build is 0.3.5.
 - AnkiConnect and Anki running locally for direct Anki import.
 - Supports the observed Google Notebook RPC formats only; Google may change these undocumented formats.
 - Images are not downloaded or embedded; available image alt text may be extracted.
