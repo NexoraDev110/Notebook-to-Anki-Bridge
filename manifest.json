@@ -1,38 +1,50 @@
 {
   "manifest_version": 3,
-  "name": "Harrison Anki Bridge",
-  "version": "0.2.4",
-  "description": "Export Notebook flashcards to Anki.",
+  "name": "Notebook to Anki Bridge",
+  "version": "0.3.0",
+  "description": "Capture flashcards from supported Google Notebook pages and export them to Anki.",
   "browser_specific_settings": {
     "gecko": {
       "id": "harrison-anki-bridge@example.local",
       "strict_min_version": "128.0"
     }
   },
-  "permissions": ["activeTab", "tabs", "storage"],
   "host_permissions": [
     "https://notebook.google.com/*",
     "http://127.0.0.1:8765/*",
     "http://localhost:8765/*"
   ],
   "background": {
-    "scripts": ["background.js"]
+    "scripts": [
+      "background.js"
+    ]
   },
   "action": {
-    "default_title": "Harrison Anki Bridge",
+    "default_title": "Notebook to Anki Bridge",
     "default_popup": "popup.html"
   },
   "content_scripts": [
     {
-      "matches": ["https://notebook.google.com/*"],
-      "js": ["network-hook.js"],
+      "matches": [
+        "https://notebook.google.com/*"
+      ],
+      "js": [
+        "network-hook.js"
+      ],
       "run_at": "document_start",
       "world": "MAIN"
     },
     {
-      "matches": ["https://notebook.google.com/*"],
-      "js": ["rpc-parser.js", "content.js"],
-      "css": ["content.css"],
+      "matches": [
+        "https://notebook.google.com/*"
+      ],
+      "js": [
+        "rpc-parser.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_start"
     }
   ]
