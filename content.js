@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "0.2.2";
+  const VERSION = "0.2.3";
   const PREFIX = "[Harrison Anki Bridge]";
   const status = {
     loaded: true, version: VERSION, host: location.host,
@@ -41,7 +41,7 @@
     const count = document.querySelector("#hab-count");
     const preview = document.querySelector("#hab-preview");
     const enabled = cards.length > 0;
-    for (const selector of ["#hab-csv", "#hab-tsv", "#hab-anki"]) {
+    for (const selector of ["#hab-csv", "#hab-tsv", "#hab-anki-test", "#hab-anki-all"]) {
       const button = document.querySelector(selector);
       if (button) button.disabled = !enabled;
     }
@@ -124,13 +124,14 @@
     root.innerHTML = `
       <button id="hab-toggle" type="button" title="Harrison Anki Bridge">HAB</button>
       <section id="hab-panel" hidden>
-        <header><strong>Harrison Anki Bridge 0.2.2</strong><button id="hab-close" type="button">×</button></header>
+        <header><strong>Harrison Anki Bridge 0.2.3</strong><button id="hab-close" type="button">×</button></header>
         <p id="hab-count">Waiting for the Notebook flashcards RPC response.</p>
         <pre id="hab-preview"></pre>
         <div class="hab-actions">
           <button id="hab-csv" type="button" disabled>Export CSV</button>
           <button id="hab-tsv" type="button" disabled>Export TSV</button>
-          <button id="hab-anki" type="button" disabled>Send to Anki</button>
+          <button id="hab-anki-test" type="button" disabled>Test first card in Anki</button>
+          <button id="hab-anki-all" type="button" disabled>Send all cards to Anki</button>
         </div>
         <small>Structured RPC extraction. Images are currently represented by their alt text, not embedded.</small>
       </section>`;
@@ -152,19 +153,40 @@
         rows.map(row => row.map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t")).join("\r\n"),
         "text/tab-separated-values");
     });
-    root.querySelector("#hab-anki").addEventListener("click", async () => {
+    async function sendToAnki(testOnly) {
       const valid = cards.filter(c => clean(c.front) && clean(c.back));
-      if (!valid.length) return;
-      root.querySelector("#hab-count").textContent = "Sending " + valid.length + " notes to Anki…";
+      const selected = testOnly ? valid.slice(0, 1) : valid;
+      if (!selected.length) return;
+      if (!testOnly && !window.confirm("Send " + selected.length + " cards to Anki? Existing notes and repeated Front fields will be skipped.")) return;
+
+      const testButton = root.querySelector("#hab-anki-test");
+      const allButton = root.querySelector("#hab-anki-all");
+      testButton.disabled = true;
+      allButton.disabled = true;
+      root.querySelector("#hab-count").textContent = "Checking AnkiConnect and sending " + selected.length + " note(s)…";
       try {
-        const response = await browser.runtime.sendMessage({ type: "HAB_ANKI_ADD", notes: valid });
-        root.querySelector("#hab-count").textContent = response?.ok
-          ? response.added + " notes added to Anki."
-          : "AnkiConnect result: " + JSON.stringify(response);
+        const response = await browser.runtime.sendMessage({ type: "HAB_ANKI_ADD", notes: selected });
+        if (!response) throw new Error("No response from the background script.");
+        const summary = [
+          "Added: " + (response.added || 0),
+          "Existing/not addable: " + (response.skippedExisting || 0),
+          "Repeated in this batch: " + (response.skippedInBatch || 0),
+          "Invalid: " + (response.invalid || 0),
+          "Failed: " + (response.failed || 0)
+        ].join(" · ");
+        root.querySelector("#hab-count").textContent = response.error
+          ? "AnkiConnect error: " + response.error + " · " + summary
+          : summary;
+        console.info(PREFIX, "AnkiConnect import result", response);
       } catch (error) {
         root.querySelector("#hab-count").textContent = "AnkiConnect error: " + clean(error.message || error);
+      } finally {
+        testButton.disabled = false;
+        allButton.disabled = false;
       }
-    });
+    }
+    root.querySelector("#hab-anki-test").addEventListener("click", () => sendToAnki(true));
+    root.querySelector("#hab-anki-all").addEventListener("click", () => sendToAnki(false));
     renderStatus();
   }
 
