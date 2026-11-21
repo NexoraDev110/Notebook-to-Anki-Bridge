@@ -159,7 +159,6 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
           deckSelect.appendChild(option);
         }
         if (response.decks.includes(previous)) deckSelect.value = previous;
-        else if (response.decks.includes("Harrison::Inbox")) deckSelect.value = "Harrison::Inbox";
         deckSelect.disabled = response.decks.length === 0;
         deckStatus.textContent = response.decks.length
           ? response.decks.length + " existing deck(s) loaded. No deck will be created automatically."
