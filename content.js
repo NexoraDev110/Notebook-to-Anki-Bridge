@@ -185,6 +185,15 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
       if (!panel.hidden && !deckSelect.options.length) loadDecks();
     });
     root.querySelector("#hab-deck-refresh").addEventListener("click", loadDecks);
+    deckSelect.addEventListener("change", () => {
+      if (deckSelect.value) {
+        deckStatus.classList.remove("hab-error");
+        deckStatus.removeAttribute("role");
+        const loadedDeckCount = Math.max(0, deckSelect.options.length - 1);
+        deckStatus.textContent = loadedDeckCount +
+          " existing deck(s) loaded. No deck will be created automatically.";
+      }
+    });
     root.querySelector("#hab-close").addEventListener("click", () => { panel.hidden = true; });
     root.querySelector("#hab-csv").addEventListener("click", () => {
       const rows = [["Front", "Back"], ...cards.map(c => [c.front, c.back])];
