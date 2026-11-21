@@ -61,7 +61,8 @@
   function capture(raw, requestUrl) {
     try {
       const url = new URL(requestUrl, location.href);
-      const match = url.pathname.match(/\/artifact\/([a-f0-9-]{36})/i);
+      const sourcePath = url.searchParams.get("source-path") || "";
+      const match = sourcePath.match(/\/artifact\/([a-f0-9-]{36})/i);
       const requestedId = match ? match[1] : "";
       const result = window.HABRpcParser.parseResponse(raw, requestedId);
       if (requestedId && result.artifactId && requestedId !== result.artifactId) {
