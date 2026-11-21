@@ -4,7 +4,7 @@ A cross-browser extension for Firefox and Chrome that captures flashcards from s
 
 ## Version 0.3.3
 
-This release adds a Chrome Manifest V3 build in the `chrome/` directory. The Chrome build uses a service worker and the Chrome Extensions API; the Firefox build remains at the repository root.
+This release adds a Chrome Manifest V3 build in the `chrome/` directory. The Chrome build uses a service worker and the Chrome Extensions API; the Firefox build remains at the repository root. Chrome version 0.3.4 adds an in-product privacy disclosure; Firefox remains at 0.3.3.
 
 ## Previous version 0.3.2
 
