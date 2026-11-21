@@ -29,6 +29,15 @@
     return undefined;
   }
 
+  function deepValue(node, key) {
+    let result;
+    walk(node, current => {
+      if (result !== undefined || !Array.isArray(current)) return;
+      if (current.length >= 2 && current[0] === key) result = current[1];
+    });
+    return result;
+  }
+
   function walk(node, visit, depth = 0, seen = new Set()) {
     if (depth > MAX_DEPTH || !node || typeof node !== "object" || seen.has(node)) return;
     seen.add(node);
@@ -123,7 +132,7 @@
 
     const allCards = [];
     for (const completion of artifactFound) {
-      const cardsNode = directValue(completion, "cards");
+      const cardsNode = deepValue(completion, "cards");
       if (cardsNode !== undefined) allCards.push(...extractCardsArray(cardsNode));
     }
     const unique = [];
