@@ -1,0 +1,244 @@
+# Development Notes
+
+This file is the engineering handover for Notebook to Anki Bridge. It records confirmed findings, implementation decisions, test evidence, known limitations, and the next release checklist so future work does not repeat the same investigation.
+
+## 1. Project scope
+
+Notebook to Anki Bridge is a Firefox/Chrome extension that captures structured flashcards from supported Google Notebook pages and exports them to Anki through AnkiConnect.
+
+Current scope:
+- Capture Front/Back flashcard content from fullscreen artifacts and the embedded/right-side flashcard panel.
+- Let the user select an existing Anki deck returned by AnkiConnect.
+- Search/filter the loaded deck list.
+- Export cards as CSV/TSV or explicitly send them to Anki.
+- Preserve image alt text/placeholders. Downloading and embedding image binaries is not implemented.
+
+The extension relies on private, undocumented Google RPC formats. Google may change them without notice.
+
+## 2. Browser builds and repository layout
+
+There are two separately loadable builds:
+- Firefox: repository root.
+- Chrome: the chrome/ directory.
+
+Do not load the repository root as the Chrome unpacked extension. Do not upload GitHub's automatically generated source ZIP as a Firefox AMO package because it includes the parent directory and Chrome build.
+
+The documented Firefox packaging script is:
+
+```powershell
+.\scripts\package-firefox.ps1
+```
+
+It creates a Firefox-only ZIP with manifest.json at the archive root. A Chrome ZIP packaging procedure still needs to be defined and verified.
+
+## 3. Confirmed Notebook RPC findings
+
+### 3.1 Flashcard RPC
+
+The confirmed flashcard response uses:
+- Host: https://notebook.google.com
+- Endpoint: /_/LabsTailwindUi/data/batchexecute
+- RPC ID: v9rmvd
+
+The batchexecute response contains HTML with a data-app-data attribute. Its decoded JSON contains a flashcards array. Each card has:
+- f: Front side
+- b: Back side
+
+Each side contains flashcardContentBlock entries. Text is stored in each text block's content property. Image blocks may include alt text and references.
+
+This structure was observed in both fullscreen and embedded flashcard experiences. In the embedded test, the response contained the same data-app-data / flashcards[] / f / b / flashcardContentBlock[] structure.
+
+### 3.2 Source-path difference: root cause of embedded failure
+
+Fullscreen request:
+
+```text
+/notebook/<notebook-uuid>/artifact/<artifact-uuid>
+```
+
+Embedded/right-side panel request:
+
+```text
+/notebook/<notebook-uuid>
+```
+
+The original network filter accepted only source paths containing /artifact/. Therefore it missed embedded responses even though the RPC ID and payload structure were the same.
+
+The filter was corrected to accept only these two constrained path forms:
+
+```regex
+^/notebook/[a-f0-9-]{36}(?:/artifact/[a-f0-9-]{36})?$
+```
+
+This is deliberately narrower than accepting arbitrary Notebook source paths.
+
+### 3.3 RPCs investigated and not accepted as flashcard sources
+
+Do not re-enable these as flashcard data sources without new response evidence:
+
+- Fxmvse: observed embedded-panel state such as currentView, currentCardIndex, activePile, and acquisition state. It did not contain Front/Back card content.
+- ulBSjf: observed as a small state-related response, not the structured flashcard payload.
+- HpN0Ub: small response; not the card payload in the investigated capture.
+- ub2Bae: large response containing Notebook source metadata/listing, not flashcard content.
+- khqZz: large response containing Notebook conversation/answer content, not the flashcard payload.
+- gArtLc: investigated but not identified as the flashcard payload.
+- rLM1Ne: observed topic/section labels such as symptoms/triggers, not the structured flashcard payload.
+
+Response size alone is not evidence that an RPC contains flashcards. Inspect its actual structure before changing the allowlist or parser.
+
+## 4. Cross-origin iframe investigation
+
+The embedded page contained a cross-origin iframe using a host under *.scf.usercontent.goog and a notebooklm-apps/shim.html path. The parent page could inspect the iframe element and URL but could not access its document because of same-origin restrictions.
+
+The presence of this iframe did not prove that flashcard data had to be captured inside it.
+
+The decisive evidence was that the top-level page's performance entries exposed a v9rmvd batchexecute Fetch request with a notebook-level source path, and that response contained the flashcard HTML/data. Therefore the fix was to broaden the validated source-path condition in the existing top-level hook, not to inject the extension into every frame.
+
+Do not add all_frames, broad *.scf.usercontent.goog host permissions, or iframe UI injection without new evidence. These changes could create duplicate extension panels and unnecessary permissions.
+
+## 5. Capture architecture
+
+Firefox and Chrome maintain parallel copies of the relevant scripts.
+
+### Network hook
+Files:
+- network-hook.js
+- chrome/network-hook.js
+
+Responsibilities:
+- Run in the page MAIN world on https://notebook.google.com/*.
+- Observe Fetch and XMLHttpRequest responses for the exact batchexecute endpoint on the same origin.
+- Allow only RPC ID v9rmvd.
+- Validate the notebook/artifact source-path pattern.
+- Clone/read successful response bodies and relay them through window.postMessage.
+- Do not read or relay request headers, cookies, authorization values, or request bodies.
+- Enforce an 8,000,000-character response size limit.
+
+### Isolated content script
+Files:
+- content.js
+- chrome/content.js
+
+Responsibilities:
+- Accept only same-window, same-origin messages with the expected message source/type and RPC ID.
+- Pass the response body to the parser.
+- Extract the artifact UUID from source-path when present and validate the parser's artifact ID when applicable.
+- Render the extension panel and card preview.
+- Offer CSV/TSV export and explicit Anki import.
+
+### RPC parser
+Files:
+- rpc-parser.js
+- chrome/rpc-parser.js
+
+Responsibilities include parsing batchexecute framing, decoding nested JSON, locating embedded HTML data-app-data, extracting structured Front/Back blocks, preserving image placeholders/alt text, and removing duplicate or incomplete cards.
+
+Keep Firefox and Chrome copies synchronized unless a browser-specific difference is intentional and documented.
+
+## 6. Anki deck picker and search
+
+The extension loads the existing deck list from AnkiConnect. It does not create decks automatically.
+
+The deck picker now includes a search input:
+- Search filters the already-loaded deck names as the user types.
+- Matching is case-insensitive.
+- The selected deck is preserved while filtering, including when it is temporarily outside the filtered results.
+- Status text reports matching results and the total loaded deck count.
+- Refresh reloads the deck list from AnkiConnect.
+
+Files updated:
+- content.js
+- chrome/content.js
+
+Keep the two browser implementations behaviorally equivalent.
+
+## 7. Anki import behavior and boundaries
+
+- AnkiConnect is optional and must be running locally for direct import.
+- The extension connects to http://127.0.0.1:8765; localhost is also included in host permissions.
+- The user must explicitly choose a destination deck and click the import action.
+- The selected deck is validated again before import.
+- Notes use the Anki Basic note type with Front and Back fields.
+- Existing/non-addable notes and duplicate Front fields in the current batch are skipped.
+- The extension does not overwrite existing notes or create destination decks automatically.
+- CSV/TSV export is available independently of AnkiConnect.
+
+## 8. Test evidence: separate real-browser tests from static checks
+
+### Confirmed by real user browser testing
+- Fullscreen flashcard extraction worked before the embedded-panel fix.
+- After the source-path filter fix, the user confirmed that embedded/right-side flashcard extraction works.
+- The user reported the deck search feature as working satisfactorily after it was added.
+
+### Static/mock checks previously performed
+- JavaScript syntax checks were run on the six main JS files involved in capture/parsing/content handling.
+- A mock parser test extracted two unique cards, removed a duplicate, retained image placeholder/alt text, and rejected a mismatched artifact ID.
+- The source-path filter was checked against embedded and fullscreen examples and an unrelated path.
+- GitHub files were fetched again after edits to verify that intended changes were present.
+
+Static/mock checks are not substitutes for browser testing. Never describe a syntax or mock test as a real-browser test.
+
+### Not yet established
+- Broad compatibility across many notebooks, accounts, locales, and Google UI versions.
+- Stability of Google's private RPC schema over time.
+- Automated end-to-end browser coverage for both Firefox and Chrome.
+- Image binary retrieval/embedding.
+- Final release package installation/update validation for both browsers.
+
+## 9. Historical implementation changes
+
+1. Capture was narrowed to the confirmed flashcard RPC v9rmvd; state-only RPCs were not treated as card data.
+2. The network hook was changed to accept both fullscreen artifact source paths and embedded notebook source paths while retaining strict endpoint, origin, RPC, and path validation.
+3. The same source-path fix was applied to Firefox and Chrome network hooks.
+4. A searchable existing-deck picker was added to both Firefox and Chrome content scripts.
+5. The selected deck is retained while search results are filtered.
+6. README documentation has not yet been brought into line with these findings and must be corrected before the next release.
+
+## 10. Documentation and release inconsistencies
+
+At the time this note was written, the manifests report different versions:
+- Root Firefox manifest.json: 0.3.4
+- chrome/manifest.json: 0.3.5
+
+The README RPC section is stale. It incorrectly describes Fxmvse as the fullscreen flashcard RPC and ulBSjf as the embedded flashcard RPC, and it describes embedded support as experimental. Those statements conflict with the investigation and user testing recorded above.
+
+The next release version proposed during project discussion is 0.3.6 for both browser builds. This is a proposal only; it has not yet been applied to the manifests or published.
+
+No new GitHub Release or release assets have been published as part of the changes recorded here.
+
+## 11. Next release checklist
+
+- [ ] Update README RPC descriptions to identify v9rmvd and both supported source-path forms.
+- [ ] Remove outdated statements that Fxmvse / ulBSjf are the flashcard data RPCs.
+- [ ] Update the README's embedded support status to reflect user-confirmed implementation.
+- [ ] Align Firefox and Chrome manifest versions (proposed: 0.3.6).
+- [ ] Review release notes and privacy wording against the actual code.
+- [ ] Run syntax checks on all JavaScript files in both builds.
+- [ ] Confirm Firefox and Chrome copies of network hook, parser, and content UI remain synchronized where intended.
+- [ ] Build a Firefox-only ZIP using scripts/package-firefox.ps1; inspect its contents and confirm manifest.json is at the archive root.
+- [ ] Define/build a Chrome ZIP containing the contents of chrome/ at the archive root; inspect its contents.
+- [ ] Install/test the packaged builds, not only unpacked source folders.
+- [ ] Real-browser smoke test fullscreen capture in Firefox and Chrome.
+- [ ] Real-browser smoke test embedded-panel capture in Firefox and Chrome.
+- [ ] Test deck loading, search, selection retention, refresh, CSV/TSV export, and AnkiConnect import.
+- [ ] Create a GitHub Release (proposed tag: v0.3.6) and attach the correct browser packages.
+- [ ] Verify the release page, tag, and downloadable assets after publication.
+
+## 12. Safe change workflow
+
+For future repository work:
+
+1. Identify the exact source of the behavior before editing. For Google RPC changes, capture the request URL and response shape first.
+2. Fetch the latest version of every target file from GitHub main immediately before editing.
+3. Apply the smallest change that addresses the verified cause.
+4. Keep Firefox and Chrome implementations aligned.
+5. After each update, fetch the file again and verify the saved content.
+6. Run syntax checks and focused parser/filter tests.
+7. Clearly label tests as static/mock or real-browser.
+8. Do not change manifests, frame permissions, or parser architecture based only on speculation.
+9. Do not publish a release until both browser packages have been built and inspected.
+10. Never claim a release, package, or browser test exists unless it has actually been created or performed.
+
+---
+
+Last updated: 2026-11-23
