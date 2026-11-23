@@ -30,7 +30,8 @@ $files = @(
 )
 
 foreach ($relativePath in $files) {
-    $fullPath = Join-Path $chromeRoot $relativePath
+    $sourceRoot = if ($relativePath -eq "LICENSE") { $repoRoot } else { $chromeRoot }
+    $fullPath = Join-Path $sourceRoot $relativePath
     if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
         throw "Required Chrome package file is missing: $relativePath"
     }
@@ -46,7 +47,8 @@ $archive = [System.IO.Compression.ZipFile]::Open(
 
 try {
     foreach ($relativePath in $files) {
-        $fullPath = Join-Path $chromeRoot $relativePath
+        $sourceRoot = if ($relativePath -eq "LICENSE") { $repoRoot } else { $chromeRoot }
+        $fullPath = Join-Path $sourceRoot $relativePath
         [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
             $archive,
             $fullPath,
