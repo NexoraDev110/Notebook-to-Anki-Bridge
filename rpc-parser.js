@@ -164,6 +164,20 @@
     return parsed.length === 1 ? parsed[0] : parsed;
   }
 
+  function containsExactString(node, expected, depth = 0, budget = { count: 0 }) {
+    if (depth > MAX_DEPTH || ++budget.count > MAX_NODES || node == null) return false;
+    if (node === expected) return true;
+    if (Array.isArray(node)) {
+      return node.some(child => containsExactString(child, expected, depth + 1, budget));
+    }
+    if (typeof node === "object") {
+      return Object.values(node).some(child =>
+        containsExactString(child, expected, depth + 1, budget)
+      );
+    }
+    return false;
+  }
+
   function findEmbeddedAppData(node, depth = 0, budget = { count: 0 }) {
     if (depth > MAX_DEPTH || ++budget.count > MAX_NODES || node == null) return null;
 
@@ -279,6 +293,12 @@
 
     const outer = parseBatchedResponse(raw);
     const decoded = decodeNested(outer);
+
+    // v9rmvd echoes the artifact ID in its response envelope. Validate it
+    // against source-path so a stale or unrelated artifact response is rejected.
+    if (expectedArtifactId && !containsExactString(decoded, expectedArtifactId)) {
+      throw new Error("Artifact ID in RPC response does not match the requested artifact.");
+    }
 
     // Current NotebookLM Flashcard artifacts are returned by v9rmvd as HTML.
     // The HTML embeds the structured source data in [data-app-data].
