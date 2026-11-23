@@ -140,6 +140,11 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
 
     const deckRow = makeElement("div");
     deckRow.className = "hab-deck-row";
+    const deckSearch = makeElement("input", "hab-deck-search");
+    deckSearch.type = "search";
+    deckSearch.placeholder = "Search existing Anki decks…";
+    deckSearch.setAttribute("aria-label", "Search existing Anki decks");
+    deckSearch.disabled = true;
     const deckSelect = makeElement("select", "hab-deck");
     deckSelect.disabled = true;
     const initialOption = makeElement("option", null, "Load decks from Anki…");
@@ -151,7 +156,35 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
 
     const deckStatus = makeElement("small", "hab-deck-status",
       "Connect to AnkiConnect to load your existing decks.");
-    deckPicker.append(deckLabel, deckRow, deckStatus);
+    deckPicker.append(deckLabel, deckSearch, deckRow, deckStatus);
+
+    let allDecks = [];
+    function renderDeckOptions(preferredValue = deckSelect.value) {
+      const query = clean(deckSearch.value).toLocaleLowerCase();
+      const matches = allDecks.filter(name => name.toLocaleLowerCase().includes(query));
+      deckSelect.replaceChildren();
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "Select destination deck…";
+      deckSelect.appendChild(placeholder);
+
+      for (const name of matches) {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        deckSelect.appendChild(option);
+      }
+
+      if (preferredValue && allDecks.includes(preferredValue) && !matches.includes(preferredValue)) {
+        const selectedOption = document.createElement("option");
+        selectedOption.value = preferredValue;
+        selectedOption.textContent = preferredValue + " (currently selected)";
+        deckSelect.appendChild(selectedOption);
+      }
+      if (preferredValue && allDecks.includes(preferredValue)) deckSelect.value = preferredValue;
+      deckSelect.disabled = allDecks.length === 0;
+      return matches.length;
+    }
 
     const actions = makeElement("div");
     actions.className = "hab-actions";
@@ -184,23 +217,15 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
           throw new Error(response?.error || "AnkiConnect returned an invalid deck list.");
         }
         const previous = deckSelect.value;
-        deckSelect.replaceChildren();
-        const placeholder = document.createElement("option");
-        placeholder.value = "";
-        placeholder.textContent = "Select destination deck…";
-        deckSelect.appendChild(placeholder);
-        for (const name of response.decks) {
-          const option = document.createElement("option");
-          option.value = name;
-          option.textContent = name;
-          deckSelect.appendChild(option);
-        }
-        if (response.decks.includes(previous)) deckSelect.value = previous;
-        deckSelect.disabled = response.decks.length === 0;
+        allDecks = response.decks;
+        deckSearch.disabled = allDecks.length === 0;
+        renderDeckOptions(previous);
         deckStatus.textContent = response.decks.length
           ? response.decks.length + " existing deck(s) loaded. No deck will be created automatically."
           : "No decks were returned by AnkiConnect.";
       } catch (error) {
+        allDecks = [];
+        deckSearch.disabled = true;
         deckSelect.replaceChildren();
         const option = document.createElement("option");
         option.value = "";
@@ -218,6 +243,12 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
       if (!panel.hidden && !deckSelect.options.length) loadDecks();
     });
     root.querySelector("#hab-deck-refresh").addEventListener("click", loadDecks);
+    deckSearch.addEventListener("input", () => {
+      const matchCount = renderDeckOptions(deckSelect.value);
+      deckStatus.textContent = matchCount
+        ? matchCount + " matching deck(s) shown."
+        : "No matching decks. Try another search.";
+    });
     deckSelect.addEventListener("change", () => {
       if (deckSelect.value) {
         deckStatus.classList.remove("hab-error");
