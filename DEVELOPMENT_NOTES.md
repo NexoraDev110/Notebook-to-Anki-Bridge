@@ -192,31 +192,32 @@ Static/mock checks are not substitutes for browser testing. Never describe a syn
 3. The same source-path fix was applied to Firefox and Chrome network hooks.
 4. A searchable existing-deck picker was added to both Firefox and Chrome content scripts.
 5. The selected deck is retained while search results are filtered.
-6. README documentation has not yet been brought into line with these findings and must be corrected before the next release.
+6. README documentation was corrected for the v9rmvd RPC, both source-path forms, confirmed embedded support, deck search, and browser-specific package commands.
 
 ## 10. Documentation and release inconsistencies
 
-At the time this note was written, the manifests report different versions:
-- Root Firefox manifest.json: 0.3.4
-- chrome/manifest.json: 0.3.5
+Both manifests have now been aligned to version 0.3.6:
+- Root Firefox manifest.json: 0.3.6
+- chrome/manifest.json: 0.3.6
 
-The README RPC section is stale. It incorrectly describes Fxmvse as the fullscreen flashcard RPC and ulBSjf as the embedded flashcard RPC, and it describes embedded support as experimental. Those statements conflict with the investigation and user testing recorded above.
+The README was corrected to document v9rmvd, the fullscreen and embedded source-path forms, the state-only RPCs that are not parsed as flashcard payloads, and the deck search behavior. It also documents both browser packaging scripts.
 
-The next release version proposed during project discussion is 0.3.6 for both browser builds. This is a proposal only; it has not yet been applied to the manifests or published.
+Version 0.3.6 is prepared in the main branch but has not been published as a GitHub Release.
 
 No new GitHub Release or release assets have been published as part of the changes recorded here.
 
 ## 11. Next release checklist
 
-- [ ] Update README RPC descriptions to identify v9rmvd and both supported source-path forms.
-- [ ] Remove outdated statements that Fxmvse / ulBSjf are the flashcard data RPCs.
-- [ ] Update the README's embedded support status to reflect user-confirmed implementation.
-- [ ] Align Firefox and Chrome manifest versions (proposed: 0.3.6).
+- [x] Update README RPC descriptions to identify v9rmvd and both supported source-path forms.
+- [x] Remove outdated statements that Fxmvse / ulBSjf are the flashcard data RPCs.
+- [x] Update the README's embedded support status to reflect user-confirmed implementation.
+- [x] Align Firefox and Chrome manifest versions to 0.3.6.
+- [x] Add a Chrome ZIP packaging script and document both browser package commands.
 - [ ] Review release notes and privacy wording against the actual code.
 - [ ] Run syntax checks on all JavaScript files in both builds.
 - [ ] Confirm Firefox and Chrome copies of network hook, parser, and content UI remain synchronized where intended.
 - [ ] Build a Firefox-only ZIP using scripts/package-firefox.ps1; inspect its contents and confirm manifest.json is at the archive root.
-- [ ] Define/build a Chrome ZIP containing the contents of chrome/ at the archive root; inspect its contents.
+- [ ] Execute scripts/package-firefox.ps1 and scripts/package-chrome.ps1 on Windows PowerShell; inspect both ZIPs and confirm each manifest.json is at the archive root.
 - [ ] Install/test the packaged builds, not only unpacked source folders.
 - [ ] Real-browser smoke test fullscreen capture in Firefox and Chrome.
 - [ ] Real-browser smoke test embedded-panel capture in Firefox and Chrome.
