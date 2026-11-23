@@ -9,7 +9,7 @@
   const matchTarget = (value) => {
     try {
       const url = new URL(String(value), location.href);
-      if (url.origin !== location.origin || !url.pathname !== TARGET) return null;
+      if (url.origin !== location.origin || url.pathname !== TARGET) return null;
 
       const rpcIds = (url.searchParams.get("rpcids") || "").split(",");
       const matchedRpc = rpcIds.find(id => ALLOWED_RPCS.has(id));
