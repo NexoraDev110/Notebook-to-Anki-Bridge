@@ -15,10 +15,16 @@
       const matchedRpc = rpcIds.find(id => ALLOWED_RPCS.has(id));
       if (!matchedRpc) return null;
 
-      // v9rmvd returns the Flashcard artifact HTML containing data-app-data.
-      // Ignore state-only RPCs such as Fxmvse and ulBSjf.
-      if (matchedRpc === "v9rmvd" &&
-          !url.searchParams.get("source-path")?.includes("/artifact/")) return null;
+      // v9rmvd returns Flashcard HTML containing data-app-data in both
+      // fullscreen artifact views and embedded Notebook side panels.
+      // Keep the source-path constrained to a Notebook UUID, optionally
+      // followed by an artifact UUID; ignore unrelated RPC contexts.
+      if (matchedRpc === "v9rmvd") {
+        const sourcePath = url.searchParams.get("source-path") || "";
+        if (!/^\/notebook\/[a-f0-9-]{36}(?:\/artifact\/[a-f0-9-]{36})?$/i.test(sourcePath)) {
+          return null;
+        }
+      }
 
       return matchedRpc;
     } catch (_) {
