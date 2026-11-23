@@ -164,24 +164,136 @@
     return parsed.length === 1 ? parsed[0] : parsed;
   }
 
+  function findEmbeddedAppData(node, depth = 0, budget = { count: 0 }) {
+    if (depth > MAX_DEPTH || ++budget.count > MAX_NODES || node == null) return null;
+
+    if (typeof node === "string") {
+      if (node.length > 8_000_000 || !/<html[\s>]/i.test(node) ||
+          !/data-app-data/i.test(node)) return null;
+      if (typeof DOMParser === "undefined") {
+        throw new Error("DOMParser is unavailable; cannot inspect the Flashcard artifact HTML.");
+      }
+      const documentNode = new DOMParser().parseFromString(node, "text/html");
+      const appDataElement = documentNode.querySelector("[data-app-data]");
+      const serialized = appDataElement?.dataset?.appData;
+      if (!serialized) return null;
+      let appData;
+      try {
+        appData = JSON.parse(serialized);
+      } catch (_) {
+        throw new Error("The artifact data-app-data attribute is not valid JSON.");
+      }
+      if (!appData || typeof appData !== "object" || !Array.isArray(appData.flashcards)) {
+        throw new Error("The artifact app data does not contain a flashcards array.");
+      }
+      return appData;
+    }
+
+    if (Array.isArray(node)) {
+      for (const child of node) {
+        const found = findEmbeddedAppData(child, depth + 1, budget);
+        if (found) return found;
+      }
+    } else if (typeof node === "object") {
+      for (const child of Object.values(node)) {
+        const found = findEmbeddedAppData(child, depth + 1, budget);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  function extractAppSide(side) {
+    if (typeof side === "string") return { text: side.trim(), images: [] };
+    if (!side || typeof side !== "object" ||
+        !Array.isArray(side.flashcardContentBlock)) {
+      return { text: "", images: [] };
+    }
+
+    const parts = [];
+    const images = [];
+    for (const block of side.flashcardContentBlock) {
+      if (!block || typeof block !== "object") continue;
+      if (block.type === "text" && typeof block.content === "string") {
+        if (block.content.trim()) parts.push(block.content.trim());
+      } else if (block.type === "image") {
+        const image = {
+          reference: typeof block.reference === "string" ? block.reference : "",
+          alt: typeof block.alt === "string" ? block.alt : ""
+        };
+        images.push(image);
+        parts.push(image.alt ? "[Image: " + image.alt + "]" : "[Image]");
+      }
+    }
+    return { text: parts.join("\n").trim(), images };
+  }
+
+  function extractEmbeddedFlashcards(appData, expectedArtifactId) {
+    const found = [];
+    const seen = new Set();
+    let duplicateCount = 0;
+    const sourceCards = appData.flashcards;
+
+    for (const record of sourceCards) {
+      if (!record || typeof record !== "object") continue;
+      const front = extractAppSide(record.f);
+      const back = extractAppSide(record.b);
+      if (!front.text || !back.text) continue;
+
+      const key = front.text + "\u0000" + back.text;
+      if (seen.has(key)) {
+        duplicateCount++;
+        continue;
+      }
+      seen.add(key);
+      found.push({
+        front: front.text,
+        back: back.text,
+        images: [...front.images, ...back.images],
+        status: typeof record.userStatus === "string" ? record.userStatus : ""
+      });
+    }
+
+    if (!found.length) {
+      throw new Error("The artifact app data was found, but no complete Front/Back flashcards could be extracted.");
+    }
+
+    return {
+      artifactId: expectedArtifactId || "",
+      cards: found,
+      total: found.length,
+      rawCardRecords: sourceCards.length,
+      duplicateCount,
+      orderIndexCount: 0,
+      orderIndexMin: null,
+      orderIndexMax: null,
+      orderIndexGaps: [],
+      imageCount: found.reduce((count, card) => count + card.images.length, 0)
+    };
+  }
+
   function parseResponse(raw, expectedArtifactId) {
     if (typeof raw !== "string" || raw.length > 8_000_000) {
       throw new Error("Invalid or oversized RPC response.");
     }
+
     const outer = parseBatchedResponse(raw);
     const decoded = decodeNested(outer);
-    // Fxmvse identifies the request in the batchexecute URL. Google does not
-    // necessarily echo that RPC ID in the response body, so do not require it here.
-    // The request URL is already filtered by the content script to the active
-    // artifact's source-path. The response body may omit or transform that ID,
-    // so it is not a reliable response-validation field.
 
+    // Current NotebookLM Flashcard artifacts are returned by v9rmvd as HTML.
+    // The HTML embeds the structured source data in [data-app-data].
+    const appData = findEmbeddedAppData(decoded);
+    if (appData) return extractEmbeddedFlashcards(appData, expectedArtifactId);
+
+    // Retain support for the older latestCompletion response shape.
     const artifactFound = [];
     walk(decoded, node => {
       if (Array.isArray(node) && node.length >= 2 &&
           node[0] === "latestCompletion") artifactFound.push(node[1]);
     });
-    if (!artifactFound.length) throw new Error("latestCompletion was not found.");
+    if (!artifactFound.length) {
+      throw new Error("Flashcard app data was not found in the v9rmvd artifact response.");
+    }
 
     const allCards = [];
     let rawCardRecords = 0;
