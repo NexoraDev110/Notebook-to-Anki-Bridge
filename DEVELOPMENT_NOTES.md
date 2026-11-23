@@ -1,6 +1,6 @@
 # Development Notes
 
-This file is the engineering handover for Notebook to Anki Bridge. It records confirmed findings, implementation decisions, test evidence, known limitations, and the next release checklist so future work does not repeat the same investigation.
+This file is the engineering handover for Notebook to Anki Bridge. It records confirmed findings, implementation decisions, test evidence, known limitations, and the release checklist so future work does not repeat the same investigation.
 
 ## 1. Project scope
 
@@ -19,34 +19,41 @@ The extension relies on private, undocumented Google RPC formats. Google may cha
 
 There are two separately loadable builds:
 - Firefox: repository root.
-- Chrome: the chrome/ directory.
+- Chrome: the `chrome/` directory.
 
 Do not load the repository root as the Chrome unpacked extension. Do not upload GitHub's automatically generated source ZIP as a Firefox AMO package because it includes the parent directory and Chrome build.
 
-The documented Firefox packaging script is:
+Two Windows PowerShell packaging scripts are present:
+- Firefox: `scripts/package-firefox.ps1`
+- Chrome: `scripts/package-chrome.ps1`
 
-```powershell
-.\scripts\package-firefox.ps1
+Each script reads the version from its own manifest, creates a browser-specific ZIP under `dist/`, places that build's files directly at the ZIP root, and verifies the archive entry count and root manifest. The Chrome script packages the contents of `chrome/`, not the enclosing directory.
+
+**Important shell detail:** These are PowerShell scripts. Running ` .\scripts\package-firefox.ps1` from the Windows Command Prompt (`cmd.exe`) does not execute them as PowerShell scripts; it may open the associated editor instead. From Command Prompt, invoke them explicitly:
+
+```cmd
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-firefox.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-chrome.ps1
 ```
 
-It creates a Firefox-only ZIP with manifest.json at the archive root. A Chrome ZIP packaging procedure still needs to be defined and verified.
+Alternatively, run the original ` .\scripts\...` commands from a PowerShell terminal. Successful execution should print the created ZIP path and file count for each browser.
 
 ## 3. Confirmed Notebook RPC findings
 
 ### 3.1 Flashcard RPC
 
 The confirmed flashcard response uses:
-- Host: https://notebook.google.com
-- Endpoint: /_/LabsTailwindUi/data/batchexecute
-- RPC ID: v9rmvd
+- Host: `https://notebook.google.com`
+- Endpoint: `/_/LabsTailwindUi/data/batchexecute`
+- RPC ID: `v9rmvd`
 
-The batchexecute response contains HTML with a data-app-data attribute. Its decoded JSON contains a flashcards array. Each card has:
-- f: Front side
-- b: Back side
+The batchexecute response contains HTML with a `data-app-data` attribute. Its decoded JSON contains a `flashcards` array. Each card has:
+- `f`: Front side
+- `b`: Back side
 
-Each side contains flashcardContentBlock entries. Text is stored in each text block's content property. Image blocks may include alt text and references.
+Each side contains `flashcardContentBlock` entries. Text is stored in each text block's `content` property. Image blocks may include alt text and references.
 
-This structure was observed in both fullscreen and embedded flashcard experiences. In the embedded test, the response contained the same data-app-data / flashcards[] / f / b / flashcardContentBlock[] structure.
+This structure was observed in both fullscreen and embedded flashcard experiences. In the embedded test, the response contained the same `data-app-data` / `flashcards[]` / `f` / `b` / `flashcardContentBlock[]` structure.
 
 ### 3.2 Source-path difference: root cause of embedded failure
 
@@ -62,7 +69,7 @@ Embedded/right-side panel request:
 /notebook/<notebook-uuid>
 ```
 
-The original network filter accepted only source paths containing /artifact/. Therefore it missed embedded responses even though the RPC ID and payload structure were the same.
+The original network filter accepted only source paths containing `/artifact/`. Therefore it missed embedded responses even though the RPC ID and payload structure were the same.
 
 The filter was corrected to accept only these two constrained path forms:
 
@@ -76,48 +83,50 @@ This is deliberately narrower than accepting arbitrary Notebook source paths.
 
 Do not re-enable these as flashcard data sources without new response evidence:
 
-- Fxmvse: observed embedded-panel state such as currentView, currentCardIndex, activePile, and acquisition state. It did not contain Front/Back card content.
-- ulBSjf: observed as a small state-related response, not the structured flashcard payload.
-- HpN0Ub: small response; not the card payload in the investigated capture.
-- ub2Bae: large response containing Notebook source metadata/listing, not flashcard content.
-- khqZz: large response containing Notebook conversation/answer content, not the flashcard payload.
-- gArtLc: investigated but not identified as the flashcard payload.
-- rLM1Ne: observed topic/section labels such as symptoms/triggers, not the structured flashcard payload.
+- `Fxmvse`: observed embedded-panel state such as `currentView`, `currentCardIndex`, `activePile`, and acquisition state. It did not contain Front/Back card content.
+- `ulBSjf`: observed as a small state-related response, not the structured flashcard payload.
+- `HpN0Ub`: small response; not the card payload in the investigated capture.
+- `ub2Bae`: response containing Notebook source metadata/listing, not flashcard content.
+- `khqZz`: response containing Notebook conversation/answer content, not the flashcard payload.
+- `gArtLc`: investigated but not identified as the flashcard payload.
+- `rLM1Ne`: observed topic/section labels such as symptoms/triggers, not the structured flashcard payload.
 
 Response size alone is not evidence that an RPC contains flashcards. Inspect its actual structure before changing the allowlist or parser.
 
 ## 4. Cross-origin iframe investigation
 
-The embedded page contained a cross-origin iframe using a host under *.scf.usercontent.goog and a notebooklm-apps/shim.html path. The parent page could inspect the iframe element and URL but could not access its document because of same-origin restrictions.
+The embedded page contained a cross-origin iframe using a host under `*.scf.usercontent.goog` and a `notebooklm-apps/shim.html` path. The parent page could inspect the iframe element and URL but could not access its document because of same-origin restrictions.
 
 The presence of this iframe did not prove that flashcard data had to be captured inside it.
 
-The decisive evidence was that the top-level page's performance entries exposed a v9rmvd batchexecute Fetch request with a notebook-level source path, and that response contained the flashcard HTML/data. Therefore the fix was to broaden the validated source-path condition in the existing top-level hook, not to inject the extension into every frame.
+The decisive evidence was that the top-level page's performance entries exposed a `v9rmvd` batchexecute Fetch request with a notebook-level source path, and that response contained the flashcard HTML/data. Therefore the fix was to broaden the validated source-path condition in the existing top-level hook, not to inject the extension into every frame.
 
-Do not add all_frames, broad *.scf.usercontent.goog host permissions, or iframe UI injection without new evidence. These changes could create duplicate extension panels and unnecessary permissions.
+Do not add `all_frames`, broad `*.scf.usercontent.goog` host permissions, or iframe UI injection without new evidence. These changes could create duplicate extension panels and unnecessary permissions.
 
 ## 5. Capture architecture
 
 Firefox and Chrome maintain parallel copies of the relevant scripts.
 
 ### Network hook
+
 Files:
-- network-hook.js
-- chrome/network-hook.js
+- `network-hook.js`
+- `chrome/network-hook.js`
 
 Responsibilities:
-- Run in the page MAIN world on https://notebook.google.com/*.
+- Run in the page MAIN world on `https://notebook.google.com/*`.
 - Observe Fetch and XMLHttpRequest responses for the exact batchexecute endpoint on the same origin.
-- Allow only RPC ID v9rmvd.
+- Allow only RPC ID `v9rmvd`.
 - Validate the notebook/artifact source-path pattern.
-- Clone/read successful response bodies and relay them through window.postMessage.
+- Clone/read successful response bodies and relay them through `window.postMessage`.
 - Do not read or relay request headers, cookies, authorization values, or request bodies.
 - Enforce an 8,000,000-character response size limit.
 
 ### Isolated content script
+
 Files:
-- content.js
-- chrome/content.js
+- `content.js`
+- `chrome/content.js`
 
 Responsibilities:
 - Accept only same-window, same-origin messages with the expected message source/type and RPC ID.
@@ -127,11 +136,12 @@ Responsibilities:
 - Offer CSV/TSV export and explicit Anki import.
 
 ### RPC parser
-Files:
-- rpc-parser.js
-- chrome/rpc-parser.js
 
-Responsibilities include parsing batchexecute framing, decoding nested JSON, locating embedded HTML data-app-data, extracting structured Front/Back blocks, preserving image placeholders/alt text, and removing duplicate or incomplete cards.
+Files:
+- `rpc-parser.js`
+- `chrome/rpc-parser.js`
+
+Responsibilities include parsing batchexecute framing, decoding nested JSON, locating embedded HTML `data-app-data`, extracting structured Front/Back blocks, preserving image placeholders/alt text, and removing duplicate or incomplete cards.
 
 Keep Firefox and Chrome copies synchronized unless a browser-specific difference is intentional and documented.
 
@@ -139,7 +149,7 @@ Keep Firefox and Chrome copies synchronized unless a browser-specific difference
 
 The extension loads the existing deck list from AnkiConnect. It does not create decks automatically.
 
-The deck picker now includes a search input:
+The deck picker includes a search input:
 - Search filters the already-loaded deck names as the user types.
 - Matching is case-insensitive.
 - The selected deck is preserved while filtering, including when it is temporarily outside the filtered results.
@@ -147,15 +157,15 @@ The deck picker now includes a search input:
 - Refresh reloads the deck list from AnkiConnect.
 
 Files updated:
-- content.js
-- chrome/content.js
+- `content.js`
+- `chrome/content.js`
 
 Keep the two browser implementations behaviorally equivalent.
 
 ## 7. Anki import behavior and boundaries
 
 - AnkiConnect is optional and must be running locally for direct import.
-- The extension connects to http://127.0.0.1:8765; localhost is also included in host permissions.
+- The extension connects to `http://127.0.0.1:8765`; localhost is also included in host permissions.
 - The user must explicitly choose a destination deck and click the import action.
 - The selected deck is validated again before import.
 - Notes use the Anki Basic note type with Front and Back fields.
@@ -187,42 +197,40 @@ Static/mock checks are not substitutes for browser testing. Never describe a syn
 
 ## 9. Historical implementation changes
 
-1. Capture was narrowed to the confirmed flashcard RPC v9rmvd; state-only RPCs were not treated as card data.
+1. Capture was narrowed to the confirmed flashcard RPC `v9rmvd`; state-only RPCs were not treated as card data.
 2. The network hook was changed to accept both fullscreen artifact source paths and embedded notebook source paths while retaining strict endpoint, origin, RPC, and path validation.
 3. The same source-path fix was applied to Firefox and Chrome network hooks.
 4. A searchable existing-deck picker was added to both Firefox and Chrome content scripts.
 5. The selected deck is retained while search results are filtered.
-6. README documentation was corrected for the v9rmvd RPC, both source-path forms, confirmed embedded support, deck search, and browser-specific package commands.
+6. README documentation was corrected for the `v9rmvd` RPC, both source-path forms, confirmed embedded support, deck search, and browser-specific package commands.
+7. Both browser packaging scripts were added/documented, with ZIP-root manifest and file-count checks.
+8. The privacy policy was corrected to describe `v9rmvd` as the sole observed flashcard response and to identify `Fxmvse` / `ulBSjf` as non-payload state RPCs.
 
-## 10. Documentation and release inconsistencies
+## 10. Version and release status
 
-Both manifests have now been aligned to version 0.3.6:
-- Root Firefox manifest.json: 0.3.6
-- chrome/manifest.json: 0.3.6
+Both manifests are aligned to version `0.3.6`:
+- Root Firefox manifest: `0.3.6`
+- `chrome/manifest.json`: `0.3.6`
 
-The README was corrected to document v9rmvd, the fullscreen and embedded source-path forms, the state-only RPCs that are not parsed as flashcard payloads, and the deck search behavior. It also documents both browser packaging scripts.
+README and privacy documentation now describe the confirmed capture behavior. The current documented release candidate is `v0.3.6`.
 
-Version 0.3.6 is prepared in the main branch but has not been published as a GitHub Release.
+The latest published GitHub Release remains `v0.3.2`, and that release has no uploaded assets. No `v0.3.6` GitHub Release or release assets have been published.
 
-No new GitHub Release or release assets have been published as part of the changes recorded here.
+## 11. Release checklist
 
-## 11. Next release checklist
-
-- [x] Update README RPC descriptions to identify v9rmvd and both supported source-path forms.
-- [x] Remove outdated statements that Fxmvse / ulBSjf are the flashcard data RPCs.
-- [x] Update the README's embedded support status to reflect user-confirmed implementation.
-- [x] Align Firefox and Chrome manifest versions to 0.3.6.
+- [x] Update README RPC descriptions to identify `v9rmvd` and both supported source-path forms.
+- [x] Remove outdated statements that `Fxmvse` / `ulBSjf` are the flashcard data RPCs.
+- [x] Update README embedded support status to reflect user-confirmed implementation.
+- [x] Align Firefox and Chrome manifest versions to `0.3.6`.
 - [x] Add a Chrome ZIP packaging script and document both browser package commands.
-- [ ] Review release notes and privacy wording against the actual code.
-- [ ] Run syntax checks on all JavaScript files in both builds.
-- [ ] Confirm Firefox and Chrome copies of network hook, parser, and content UI remain synchronized where intended.
-- [ ] Build a Firefox-only ZIP using scripts/package-firefox.ps1; inspect its contents and confirm manifest.json is at the archive root.
-- [ ] Execute scripts/package-firefox.ps1 and scripts/package-chrome.ps1 on Windows PowerShell; inspect both ZIPs and confirm each manifest.json is at the archive root.
+- [x] Correct privacy policy RPC descriptions.
+- [ ] Execute both packaging scripts from PowerShell (or invoke them explicitly from CMD); verify the two ZIP files exist.
+- [ ] Inspect both ZIP archives and confirm each has exactly the intended browser files with `manifest.json` at the archive root.
 - [ ] Install/test the packaged builds, not only unpacked source folders.
 - [ ] Real-browser smoke test fullscreen capture in Firefox and Chrome.
 - [ ] Real-browser smoke test embedded-panel capture in Firefox and Chrome.
 - [ ] Test deck loading, search, selection retention, refresh, CSV/TSV export, and AnkiConnect import.
-- [ ] Create a GitHub Release (proposed tag: v0.3.6) and attach the correct browser packages.
+- [ ] Create a GitHub Release (proposed tag: `v0.3.6`) and attach the correct browser packages.
 - [ ] Verify the release page, tag, and downloadable assets after publication.
 
 ## 12. Safe change workflow
