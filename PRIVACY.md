@@ -2,7 +2,7 @@
 
 **Product:** Notebook to Anki Bridge  
 **Developer:** NexoraDev110  
-**Effective date:** 21 November 2026
+**Effective date:** 23 November 2026
 
 ## Summary
 
@@ -14,12 +14,18 @@ The extension does not operate a developer-controlled server, does not create an
 
 When you open a supported Google Notebook page, the extension observes only the following same-origin application RPC responses used by its flashcard extractor:
 
-- `Fxmvse` for the observed fullscreen artifact view, and only when the request includes an artifact source path.
-- `ulBSjf` for the observed embedded/right-side flashcard panel.
+- `v9rmvd`, the confirmed structured flashcard response used by both fullscreen artifact pages and the embedded/right-side flashcard panel.
 
 The matching response body and request URL are temporarily processed in browser memory to extract flashcard Front and Back text. This capture happens automatically when a matching response is observed on a supported page; it does not require the user to click the export or Anki buttons.
 
+The extension validates the exact batchexecute endpoint, the `v9rmvd` RPC identifier, and the expected Notebook source-path forms before relaying a response to the isolated content script:
+
+- Fullscreen artifact: `/notebook/<notebook-uuid>/artifact/<artifact-uuid>`
+- Embedded/right-side panel: `/notebook/<notebook-uuid>`
+
 The extension does not read or transmit request headers, cookies, authorization values, or request bodies. It does not intentionally collect browsing history, unrelated page content, passwords, payment details, or personal profile information.
+
+Other observed RPCs such as `Fxmvse` and `ulBSjf` are UI/state responses in the investigated flows and are not used as flashcard content sources.
 
 ## Where data goes
 
