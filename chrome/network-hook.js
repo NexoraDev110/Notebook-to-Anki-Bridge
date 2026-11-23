@@ -4,7 +4,7 @@
   window.__NAB_RPC_HOOK__ = true;
 
   const TARGET = "/_/LabsTailwindUi/data/batchexecute";
-  const ALLOWED_RPCS = new Set(["Fxmvse", "ulBSjf"]);
+  const ALLOWED_RPCS = new Set(["v9rmvd"]);
 
   const matchTarget = (value) => {
     try {
@@ -15,9 +15,9 @@
       const matchedRpc = rpcIds.find(id => ALLOWED_RPCS.has(id));
       if (!matchedRpc) return null;
 
-      // Fxmvse is the observed fullscreen artifact request and must be scoped
-      // to an artifact. ulBSjf is the observed embedded-panel completion RPC.
-      if (matchedRpc === "Fxmvse" &&
+      // v9rmvd returns the Flashcard artifact HTML containing data-app-data.
+      // Ignore state-only RPCs such as Fxmvse and ulBSjf.
+      if (matchedRpc === "v9rmvd" &&
           !url.searchParams.get("source-path")?.includes("/artifact/")) return null;
 
       return matchedRpc;
