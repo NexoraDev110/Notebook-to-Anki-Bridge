@@ -1,0 +1,55 @@
+name: Build and publish browser packages
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+
+      - name: Validate release tag against both manifests
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $firefox = Get-Content -Raw manifest.json | ConvertFrom-Json
+          $chrome = Get-Content -Raw chrome/manifest.json | ConvertFrom-Json
+
+          if ("v$($firefox.version)" -ne $tag) {
+            throw "Firefox manifest version $($firefox.version) does not match tag $tag"
+          }
+          if ("v$($chrome.version)" -ne $tag) {
+            throw "Chrome manifest version $($chrome.version) does not match tag $tag"
+          }
+
+      - name: Build and verify Firefox package
+        shell: pwsh
+        run: ./scripts/package-firefox.ps1
+
+      - name: Build and verify Chrome package
+        shell: pwsh
+        run: ./scripts/package-chrome.ps1
+
+      - name: Publish GitHub Release with browser ZIPs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $firefoxZip = "dist/notebook-to-anki-bridge-firefox-$($tag.TrimStart('v')).zip"
+          $chromeZip = "dist/notebook-to-anki-bridge-chrome-$($tag.TrimStart('v')).zip"
+
+          foreach ($package in @($firefoxZip, $chromeZip)) {
+            if (-not (Test-Path -LiteralPath $package -PathType Leaf)) {
+              throw "Expected release package was not created: $package"
+            }
+          }
+
+          gh release create $tag $firefoxZip $chromeZip --title "Notebook to Anki Bridge $tag" --generate-notes --verify-tag
