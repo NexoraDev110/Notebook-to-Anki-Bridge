@@ -205,6 +205,7 @@ Static/mock checks are not substitutes for browser testing. Never describe a syn
 6. README documentation was corrected for the `v9rmvd` RPC, both source-path forms, confirmed embedded support, deck search, and browser-specific package commands.
 7. Both browser packaging scripts were added/documented, with ZIP-root manifest and file-count checks.
 8. The privacy policy was corrected to describe `v9rmvd` as the sole observed flashcard response and to identify `Fxmvse` / `ulBSjf` as non-payload state RPCs.
+9. A GitHub Actions workflow was added at `.github/workflows/release.yml`. Pushing a `v*` tag triggers Windows packaging, checks that the tag matches both manifest versions, and publishes the two ZIP files as GitHub Release assets.
 
 ## 10. Version and release status
 
@@ -224,6 +225,7 @@ The latest published GitHub Release remains `v0.3.2`, and that release has no up
 - [x] Align Firefox and Chrome manifest versions to `0.3.6`.
 - [x] Add a Chrome ZIP packaging script and document both browser package commands.
 - [x] Correct privacy policy RPC descriptions.
+- [x] Add tag-triggered GitHub Actions packaging/release workflow.
 - [ ] Execute both packaging scripts from PowerShell (or invoke them explicitly from CMD); verify the two ZIP files exist.
 - [ ] Inspect both ZIP archives and confirm each has exactly the intended browser files with `manifest.json` at the archive root.
 - [ ] Install/test the packaged builds, not only unpacked source folders.
