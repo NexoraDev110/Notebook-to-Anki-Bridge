@@ -224,7 +224,7 @@ Both final browser packages were successfully built from the updated repository 
 - The Chrome archive entry listing was manually inspected and contained exactly the 10 expected root-level entries, including manifest.json and LICENSE, with no nested chrome/ directory.
 - The user confirmed packaged-build fullscreen and embedded capture in both Chrome and Firefox.
 
-The latest published GitHub Release remains v0.3.2, and that release has no uploaded assets. No v0.3.6 GitHub Release or release assets have been published.
+GitHub Release `v0.3.6` was successfully published by the tag-triggered GitHub Actions workflow on 2026-11-23. The workflow completed with conclusion `success` for tag `v0.3.6` at commit `17a75579f42d115da5ac9bc7dba00bfd39ece792`. Both packaging steps and the publish step completed successfully. The published release is available at https://github.com/NexoraDev110/Notebook-to-Anki-Bridge/releases/tag/v0.3.6 and contains these uploaded assets:\n- `notebook-to-anki-bridge-chrome-0.3.6.zip` (13,958 bytes; SHA-256 `550a10f5b5a403788c32bcb2808c2468a91bc463040e8ada69ac36926de43e7b`).\n- `notebook-to-anki-bridge-firefox-0.3.6.zip` (13,876 bytes; SHA-256 `248d443e349fd0547631a990d690c65b92465030ad67d7482ec3598ebcecbafb`).
 
 ## 11. Release checklist
 
