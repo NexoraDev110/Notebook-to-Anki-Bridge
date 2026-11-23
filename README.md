@@ -74,6 +74,16 @@ The script creates a Firefox-only ZIP in `dist/`, with `manifest.json` directly 
 
 Chrome 111 or later is required for MAIN-world content scripts. The Chrome build uses a Manifest V3 service worker and the Chrome Extensions API.
 
+### Build a Chrome ZIP package
+
+On Windows PowerShell, run:
+
+```powershell
+.\scripts\package-chrome.ps1
+```
+
+The script creates a Chrome-only ZIP in `dist/`, with the contents of the `chrome/` build at the archive root and `manifest.json` directly at the ZIP root. Inspect and test the generated package before distribution.
+
 ## AnkiConnect
 
 AnkiConnect is optional. Install it in Anki and keep Anki running. The extension communicates with the local AnkiConnect service at `http://127.0.0.1:8765`.
