@@ -171,10 +171,6 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
     panel.append(header, count, preview, deckPicker, actions, footer);
     root.append(toggle, panel);
     document.documentElement.appendChild(root);
-    const panel = root.querySelector("#hab-panel");
-    const deckSelect = root.querySelector("#hab-deck");
-    const deckStatus = root.querySelector("#hab-deck-status");
-
     async function loadDecks() {
       const refreshButton = root.querySelector("#hab-deck-refresh");
       refreshButton.disabled = true;
