@@ -253,8 +253,7 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
       if (deckSelect.value) {
         deckStatus.classList.remove("hab-error");
         deckStatus.removeAttribute("role");
-        const loadedDeckCount = Math.max(0, deckSelect.options.length - 1);
-        deckStatus.textContent = loadedDeckCount +
+        deckStatus.textContent = allDecks.length +
           " existing deck(s) loaded. No deck will be created automatically.";
       }
     });
