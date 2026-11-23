@@ -179,6 +179,8 @@ Keep the two browser implementations behaviorally equivalent.
 - Fullscreen flashcard extraction worked before the embedded-panel fix.
 - After the source-path filter fix, the user confirmed that embedded/right-side flashcard extraction works.
 - The user reported the deck search feature as working satisfactorily after it was added.
+- The user built the final 0.3.6 ZIP packages using the repository packaging scripts and installed/tested the packaged builds.
+- The user explicitly confirmed that both fullscreen and embedded/right-side flashcard extraction work in both packaged Chrome and Firefox builds. This is real-browser smoke-test evidence for those two capture modes in both browsers.
 
 ### Static/mock checks previously performed
 - JavaScript syntax checks were run on the six main JS files involved in capture/parsing/content handling.
@@ -193,7 +195,7 @@ Static/mock checks are not substitutes for browser testing. Never describe a syn
 - Stability of Google's private RPC schema over time.
 - Automated end-to-end browser coverage for both Firefox and Chrome.
 - Image binary retrieval/embedding.
-- Final release package installation/update validation for both browsers.
+- Full functional regression coverage for deck loading/search/selection retention, refresh, CSV/TSV export, and AnkiConnect import on the packaged builds.
 
 ## 9. Historical implementation changes
 
@@ -204,8 +206,9 @@ Static/mock checks are not substitutes for browser testing. Never describe a syn
 5. The selected deck is retained while search results are filtered.
 6. README documentation was corrected for the `v9rmvd` RPC, both source-path forms, confirmed embedded support, deck search, and browser-specific package commands.
 7. Both browser packaging scripts were added/documented, with ZIP-root manifest and file-count checks.
-8. The privacy policy was corrected to describe `v9rmvd` as the sole observed flashcard response and to identify `Fxmvse` / `ulBSjf` as non-payload state RPCs.
-9. A GitHub Actions workflow was added at `.github/workflows/release.yml`. Pushing a `v*` tag triggers Windows packaging, checks that the tag matches both manifest versions, and publishes the two ZIP files as GitHub Release assets.
+8. The Chrome packaging script was corrected to source LICENSE from the repository root while still placing it at the ZIP root. The script had incorrectly searched for chrome/LICENSE.
+9. The privacy policy was corrected to describe `v9rmvd` as the sole observed flashcard response and to identify `Fxmvse` / `ulBSjf` as non-payload state RPCs.
+10. A GitHub Actions workflow was added at `.github/workflows/release.yml`. Pushing a `v*` tag triggers Windows packaging, checks that the tag matches both manifest versions, and publishes the two ZIP files as GitHub Release assets.
 
 ## 10. Version and release status
 
@@ -215,7 +218,13 @@ Both manifests are aligned to version `0.3.6`:
 
 README and privacy documentation now describe the confirmed capture behavior. The current documented release candidate is `v0.3.6`.
 
-The latest published GitHub Release remains `v0.3.2`, and that release has no uploaded assets. No `v0.3.6` GitHub Release or release assets have been published.
+Both final browser packages were successfully built from the updated repository at version 0.3.6:
+- notebook-to-anki-bridge-firefox-0.3.6.zip (10 files; packaging script verification passed).
+- notebook-to-anki-bridge-chrome-0.3.6.zip (10 files; packaging script verification passed).
+- The Chrome archive entry listing was manually inspected and contained exactly the 10 expected root-level entries, including manifest.json and LICENSE, with no nested chrome/ directory.
+- The user confirmed packaged-build fullscreen and embedded capture in both Chrome and Firefox.
+
+The latest published GitHub Release remains v0.3.2, and that release has no uploaded assets. No v0.3.6 GitHub Release or release assets have been published.
 
 ## 11. Release checklist
 
@@ -226,13 +235,14 @@ The latest published GitHub Release remains `v0.3.2`, and that release has no up
 - [x] Add a Chrome ZIP packaging script and document both browser package commands.
 - [x] Correct privacy policy RPC descriptions.
 - [x] Add tag-triggered GitHub Actions packaging/release workflow.
-- [ ] Execute both packaging scripts from PowerShell (or invoke them explicitly from CMD); verify the two ZIP files exist.
-- [ ] Inspect both ZIP archives and confirm each has exactly the intended browser files with `manifest.json` at the archive root.
-- [ ] Install/test the packaged builds, not only unpacked source folders.
-- [ ] Real-browser smoke test fullscreen capture in Firefox and Chrome.
-- [ ] Real-browser smoke test embedded-panel capture in Firefox and Chrome.
-- [ ] Test deck loading, search, selection retention, refresh, CSV/TSV export, and AnkiConnect import.
-- [ ] Create a GitHub Release (proposed tag: `v0.3.6`) and attach the correct browser packages.
+- [x] Execute both packaging scripts and build the Firefox and Chrome 0.3.6 ZIP files (10 files each).
+- [x] Verify ZIP root manifest and file count using both packaging scripts.
+- [x] Manually inspect the Chrome ZIP entry list; all 10 expected files are at the archive root, including LICENSE.
+- [x] Install/test the packaged builds in both Chrome and Firefox.
+- [x] Real-browser smoke test fullscreen capture in Firefox and Chrome.
+- [x] Real-browser smoke test embedded-panel capture in Firefox and Chrome.
+- [ ] Test deck loading, search, selection retention, refresh, CSV/TSV export, and AnkiConnect import on the packaged builds.
+- [ ] Create a GitHub Release (proposed tag: v0.3.6) and attach the correct browser packages.
 - [ ] Verify the release page, tag, and downloadable assets after publication.
 
 ## 12. Safe change workflow
