@@ -242,8 +242,10 @@ GitHub Release `v0.3.6` was successfully published by the tag-triggered GitHub A
 - [x] Real-browser smoke test fullscreen capture in Firefox and Chrome.
 - [x] Real-browser smoke test embedded-panel capture in Firefox and Chrome.
 - [ ] Test deck loading, search, selection retention, refresh, CSV/TSV export, and AnkiConnect import on the packaged builds.
-- [ ] Create a GitHub Release (proposed tag: v0.3.6) and attach the correct browser packages.
-- [ ] Verify the release page, tag, and downloadable assets after publication.
+- [x] Push annotated tag `v0.3.6` to GitHub.
+- [x] Run GitHub Actions packaging workflow; both Firefox and Chrome package builds passed.
+- [x] Publish GitHub Release `v0.3.6` and upload both browser ZIP assets.
+- [x] Verify the completed workflow, release page, tag, and both uploaded downloadable assets.
 
 ## 12. Safe change workflow
 
