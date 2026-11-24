@@ -4,8 +4,12 @@ A cross-browser browser extension that captures structured flashcards from suppo
 
 ## Current builds
 
-- **Firefox:** 0.3.6 (Firefox-specific build at the repository root; Firefox 128 or later).
-- **Chrome:** 0.3.6 (Chrome-specific build in the `chrome/` directory; Chrome 111 or later).
+- **Firefox:** 0.3.7 (Firefox-specific build at the repository root; Firefox 128 or later).
+- **Chrome:** 0.3.7 (Chrome-specific build in the `chrome/` directory; Chrome 111 or later).
+
+## Branding
+
+Version 0.3.7 adds a professional logo across both browser builds. Icon assets (`icons/logo-{16,32,48,96,128}.png`) are included in the Firefox build at the repository root and in the Chrome build under `chrome/icons/`. The same design is used for both browsers. No text, letters, or product name are included in the icon.
 
 The Firefox and Chrome manifests are intentionally separate. Do not load the repository root as the Chrome extension, and do not use the repository's full source ZIP as a Firefox AMO upload package.
 

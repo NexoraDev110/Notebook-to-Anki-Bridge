@@ -29,6 +29,16 @@ Two Windows PowerShell packaging scripts are present:
 
 Each script reads the version from its own manifest, creates a browser-specific ZIP under `dist/`, places that build's files directly at the ZIP root, and verifies the archive entry count and root manifest. The Chrome script packages the contents of `chrome/`, not the enclosing directory.
 
+## 2a. Branding and icon assets (added in v0.3.7)
+
+A professional logo was added in version 0.3.7. The icon is a blue‑to‑purple (#4A90E2 → #7B3F97) gradient square with RGBA colour type (transparent capable). No text or product name is embedded in the icon.
+
+Icon files:
+- Firefox build: `icons/logo-{16,32,48,96,128}.png`
+- Chrome build: `chrome/icons/logo-{16,32,48,96,128}.png`
+
+The same design and identical files are used for both browsers. The source generation script is `scripts/generate_icons.py` (pure Python stdlib, no third‑party dependencies). Both manifests declare the icons in the top‑level `icons` key and in `action.default_icon` for the toolbar button. Both packaging scripts were updated to include the `icons/` folder files in the ZIP archives.
+
 **Important shell detail:** These are PowerShell scripts. Running ` .\scripts\package-firefox.ps1` from the Windows Command Prompt (`cmd.exe`) does not execute them as PowerShell scripts; it may open the associated editor instead. From Command Prompt, invoke them explicitly:
 
 ```cmd

@@ -15,6 +15,14 @@ if (Test-Path $zipPath) {
     Remove-Item -LiteralPath $zipPath -Force
 }
 
+$iconFiles = @(
+    "icons/logo-16.png",
+    "icons/logo-32.png",
+    "icons/logo-48.png",
+    "icons/logo-96.png",
+    "icons/logo-128.png"
+)
+
 $files = @(
     "manifest.json",
     "background.js",
@@ -26,7 +34,7 @@ $files = @(
     "popup.js",
     "popup.css",
     "LICENSE"
-)
+) + $iconFiles
 
 foreach ($relativePath in $files) {
     $fullPath = Join-Path $repoRoot $relativePath
@@ -45,7 +53,7 @@ $archive = [System.IO.Compression.ZipFile]::Open(
 
 try {
     foreach ($relativePath in $files) {
-        $fullPath = Join-Path $repoRoot $relativePath
+        $fullPath = Join-Path $repoRoot ($relativePath -replace "/", "\")
         [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
             $archive,
             $fullPath,
@@ -68,7 +76,7 @@ try {
         throw "Packaging verification failed: Chrome files were included."
     }
     if ($entryNames.Count -ne $files.Count) {
-        throw "Packaging verification failed: unexpected ZIP entry count."
+        throw "Packaging verification failed: unexpected ZIP entry count (got $($entryNames.Count), expected $($files.Count))."
     }
 }
 finally {

@@ -16,6 +16,14 @@ if (Test-Path $zipPath) {
     Remove-Item -LiteralPath $zipPath -Force
 }
 
+$iconFiles = @(
+    "icons/logo-16.png",
+    "icons/logo-32.png",
+    "icons/logo-48.png",
+    "icons/logo-96.png",
+    "icons/logo-128.png"
+)
+
 $files = @(
     "manifest.json",
     "background.js",
@@ -27,11 +35,11 @@ $files = @(
     "popup.js",
     "popup.css",
     "LICENSE"
-)
+) + $iconFiles
 
 foreach ($relativePath in $files) {
     $sourceRoot = if ($relativePath -eq "LICENSE") { $repoRoot } else { $chromeRoot }
-    $fullPath = Join-Path $sourceRoot $relativePath
+    $fullPath = Join-Path $sourceRoot ($relativePath -replace "/", "\")
     if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
         throw "Required Chrome package file is missing: $relativePath"
     }
@@ -48,7 +56,7 @@ $archive = [System.IO.Compression.ZipFile]::Open(
 try {
     foreach ($relativePath in $files) {
         $sourceRoot = if ($relativePath -eq "LICENSE") { $repoRoot } else { $chromeRoot }
-        $fullPath = Join-Path $sourceRoot $relativePath
+        $fullPath = Join-Path $sourceRoot ($relativePath -replace "/", "\")
         [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
             $archive,
             $fullPath,
@@ -71,7 +79,7 @@ try {
         throw "Packaging verification failed: nested Chrome directory was included."
     }
     if ($entryNames.Count -ne $files.Count) {
-        throw "Packaging verification failed: unexpected ZIP entry count."
+        throw "Packaging verification failed: unexpected ZIP entry count (got $($entryNames.Count), expected $($files.Count))."
     }
 }
 finally {
