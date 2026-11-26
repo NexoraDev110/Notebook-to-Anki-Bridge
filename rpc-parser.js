@@ -246,13 +246,20 @@
     const found = [];
     const seen = new Set();
     let duplicateCount = 0;
+    let invalidCount = 0;
     const sourceCards = appData.flashcards;
 
     for (const record of sourceCards) {
-      if (!record || typeof record !== "object") continue;
+      if (!record || typeof record !== "object") {
+        invalidCount++;
+        continue;
+      }
       const front = extractAppSide(record.f);
       const back = extractAppSide(record.b);
-      if (!front.text || !back.text) continue;
+      if (!front.text || !back.text) {
+        invalidCount++;
+        continue;
+      }
 
       const key = front.text + "\u0000" + back.text;
       if (seen.has(key)) {
@@ -268,6 +275,9 @@
       });
     }
 
+    if (invalidCount > 0) {
+      throw new Error("The artifact app data contains " + invalidCount + " invalid flashcard record(s); the dataset was rejected.");
+    }
     if (sourceCards.length > 0 && !found.length) {
       throw new Error("The artifact app data was found, but its non-empty flashcards array contained no complete Front/Back cards.");
     }
