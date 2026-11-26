@@ -268,8 +268,8 @@
       });
     }
 
-    if (!found.length) {
-      throw new Error("The artifact app data was found, but no complete Front/Back flashcards could be extracted.");
+    if (sourceCards.length > 0 && !found.length) {
+      throw new Error("The artifact app data was found, but its non-empty flashcards array contained no complete Front/Back cards.");
     }
 
     return {
