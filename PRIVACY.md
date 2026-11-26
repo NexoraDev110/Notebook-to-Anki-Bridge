@@ -2,7 +2,7 @@
 
 **Product:** Notebook to Anki Bridge  
 **Developer:** NexoraDev110  
-**Effective date:** 23 November 2026
+**Effective date:** 26 November 2026
 
 ## Summary
 
@@ -16,14 +16,14 @@ When you open a supported Google Notebook page, the extension observes only the 
 
 - `v9rmvd`, the confirmed structured flashcard response used by both fullscreen artifact pages and the embedded/right-side flashcard panel.
 
-The matching response body and request URL are temporarily processed in browser memory to extract flashcard Front and Back text. This capture happens automatically when a matching response is observed on a supported page; it does not require the user to click the export or Anki buttons.
+The matching response body and request URL are temporarily processed in browser memory to extract flashcard Front and Back text. The extension also snapshots the matching POST request body and a small allowlist of request headers in memory so the user can explicitly request a refreshed copy of the same artifact with **Grab latest**. Fetch Request bodies are read from a clone, so the original NotebookLM request is not consumed or modified.
 
 The extension validates the exact batchexecute endpoint, the `v9rmvd` RPC identifier, and the expected Notebook source-path forms before relaying a response to the isolated content script:
 
 - Fullscreen artifact: `/notebook/<notebook-uuid>/artifact/<artifact-uuid>`
 - Embedded/right-side panel: `/notebook/<notebook-uuid>`
 
-The extension does not read or transmit request headers, cookies, authorization values, or request bodies. It does not intentionally collect browsing history, unrelated page content, passwords, payment details, or personal profile information.
+The extension does not read cookies or authorization headers. For the supported POST request, it reads only these allowlisted headers when present: `accept`, `content-type`, `x-goog-authuser`, `x-same-domain`, and `x-user-agent`. When you click **Grab latest**, it resends the captured POST body and those allowlisted headers only to the same validated `https://notebook.google.com/_/LabsTailwindUi/data/batchexecute` endpoint, using the browser's existing Google session credentials. The extension does not send this request data to the developer or to another third party. It does not intentionally collect browsing history, unrelated page content, passwords, payment details, or personal profile information.
 
 Other observed RPCs such as `Fxmvse` and `ulBSjf` are UI/state responses in the investigated flows and are not used as flashcard content sources.
 
@@ -32,11 +32,11 @@ Other observed RPCs such as `Fxmvse` and `ulBSjf` are UI/state responses in the 
 - **Browser:** Matching response data and extracted cards are processed locally in the browser. The extension does not send this data to a server operated by the developer.
 - **Anki:** If you select a destination deck and click **Send all cards to Anki**, the selected flashcards are sent to the AnkiConnect service running on your own computer at `127.0.0.1:8765` (or `localhost:8765`).
 - **CSV/TSV export:** If you choose an export button, the browser creates a local file download.
-- **Google Notebook:** The extension observes matching responses from the Notebook page. The Notebook service itself remains subject to Google's own privacy terms.
+- **Google Notebook:** The extension observes the matching response and, only when you click **Grab latest**, sends the captured refresh request back to the same NotebookLM endpoint. The Notebook service itself remains subject to Google's own privacy terms.
 
 ## Storage and retention
 
-The extension does not maintain a remote database, analytics store, or developer-side copy of your flashcards. Extracted cards are held in the active page's memory while that page is open. CSV/TSV files and imported Anki notes are stored wherever the browser and your local Anki installation normally store them.
+The extension does not maintain a remote database, analytics store, or developer-side copy of your flashcards or captured refresh request. Extracted cards and the bounded refresh request snapshot are held in the active page's memory while that page is open. CSV/TSV files and imported Anki notes are stored wherever the browser and your local Anki installation normally store them.
 
 ## Sharing and sale
 
