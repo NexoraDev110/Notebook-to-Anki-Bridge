@@ -1,0 +1,39 @@
+name: Grab regression tests and browser builds
+
+on:
+  push:
+    branches:
+      - feature/grab-refresh
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-and-package:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run Grab regression tests
+        run: node --test tests/grab.test.mjs
+
+      - name: Build and verify Firefox package
+        shell: pwsh
+        run: ./scripts/package-firefox.ps1
+
+      - name: Build and verify Chrome package
+        shell: pwsh
+        run: ./scripts/package-chrome.ps1
+
+      - name: Upload test packages (no release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: grab-refresh-browser-builds
+          path: dist/*.zip
+          if-no-files-found: error

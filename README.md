@@ -36,11 +36,19 @@ This does not imply compatibility with every product or website called NotebookL
 
 - A browser MAIN-world content script observes Fetch/XHR responses for the exact batchexecute endpoint and the allowlisted `v9rmvd` RPC.
 - It accepts only the expected Notebook source-path patterns for fullscreen and embedded views.
-- It relays the matching response body and request URL to the isolated extension content script.
-- It does not read or relay request headers, cookies, authorization values, or request bodies.
+- It relays the matching response body, request URL, and a bounded request snapshot to the isolated extension content script. Fetch `Request` bodies are read from a clone, leaving the original page request untouched.
+- The request snapshot contains the POST body and only the allowlisted headers needed for a possible refresh (`content-type`, `accept`, `x-goog-authuser`, `x-same-domain`, and `x-user-agent`). Cookies and authorization headers are not read by the extension.
 - The parser unwraps nested JSON and extracts text blocks from flashcard Front and Back fields.
-- Duplicate and incomplete cards are excluded.
+- Duplicate cards are skipped; incomplete non-empty datasets are rejected rather than partially replacing the current dataset.
 - Image blocks are represented by their alt text; image files are not downloaded or embedded.
+
+## Refresh captured flashcards
+
+The floating panel includes **Grab latest**. After the initial capture, use it to request the current flashcard payload again from the same NotebookLM artifact. The extension replays the captured `v9rmvd` POST request using its bounded request body and allowlisted headers, with the browser session credentials, and accepts only the exact HTTPS NotebookLM batchexecute endpoint.
+
+A successful Grab replaces the entire in-memory dataset and its extraction metadata. It does not append cards and it never changes or deletes anything in Anki. A valid empty flashcard array is accepted as a zero-card dataset. If the request, response validation, or parsing fails, the previous dataset remains intact. Grab is disabled until a suitable original POST request has been captured.
+
+Google may invalidate transient request tokens or change its undocumented RPC behavior. If Grab fails, reload the NotebookLM artifact page to capture a fresh request. The refresh flow must be tested against a live NotebookLM page before this branch is considered release-ready.
 
 ## Install on Firefox
 

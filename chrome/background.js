@@ -1,5 +1,72 @@
 "use strict";
 
+let grabInFlight = false;
+
+async function grabNotebookResponse(request) {
+  const fail = message => ({ ok: false, error: message });
+  if (grabInFlight) return fail("A NotebookLM Grab request is already in progress.");
+  grabInFlight = true;
+  try {
+    if (!request || typeof request !== "object") return fail("Missing captured NotebookLM request.");
+    if (typeof request.url !== "string" || request.url.length > 4096) return fail("Invalid request URL.");
+    const url = new URL(request.url);
+    if (url.protocol !== "https:" || url.hostname !== "notebook.google.com" ||
+        !["", "443"].includes(url.port) || url.username || url.password || url.hash ||
+        url.pathname !== "/_/LabsTailwindUi/data/batchexecute") {
+      return fail("Grab blocked an untrusted NotebookLM URL.");
+    }
+    const rpcIds = (url.searchParams.get("rpcids") || "").split(",");
+    if (!rpcIds.includes("v9rmvd")) return fail("The captured request is not the supported Flashcards RPC.");
+    const sourcePath = url.searchParams.get("source-path") || "";
+    if (!/^\/notebook\/[a-f0-9-]{36}(?:\/artifact\/[a-f0-9-]{36})?$/i.test(sourcePath)) {
+      return fail("The captured NotebookLM source path is invalid.");
+    }
+    if (request.method !== "POST" || typeof request.body !== "string" ||
+        !request.body.length || request.body.length > 2_000_000) {
+      return fail("The captured POST body is missing or exceeds the size limit.");
+    }
+    const form = new URLSearchParams(request.body);
+    if (!form.has("f.req") || !form.get("f.req")) {
+      return fail("The captured request body does not contain the expected f.req payload.");
+    }
+
+    const allowedHeaders = new Set([
+      "accept", "content-type", "x-goog-authuser", "x-same-domain", "x-user-agent"
+    ]);
+    const headers = {};
+    if (request.headers && typeof request.headers === "object" && !Array.isArray(request.headers)) {
+      for (const [key, value] of Object.entries(request.headers)) {
+        const normalized = key.toLowerCase();
+        if (allowedHeaders.has(normalized) && typeof value === "string" && value.length <= 2048) {
+          headers[normalized] = value;
+        }
+      }
+    }
+    if (!headers["content-type"] || !/application\/x-www-form-urlencoded/i.test(headers["content-type"])) {
+      return fail("The captured request is missing its expected form content type.");
+    }
+
+    const response = await fetch(url.href, {
+      method: "POST",
+      headers,
+      body: request.body,
+      credentials: "include",
+      cache: "no-store",
+      redirect: "error"
+    });
+    if (!response.ok) return fail("NotebookLM Grab request failed with HTTP " + response.status + ".");
+    const responseText = await response.text();
+    if (!responseText || responseText.length > 8_000_000) {
+      return fail("NotebookLM returned an empty or oversized Grab response.");
+    }
+    return { ok: true, responseText };
+  } catch (error) {
+    return fail(String(error?.message || error));
+  } finally {
+    grabInFlight = false;
+  }
+}
+
 async function request(action, params = {}) {
   const response = await fetch("http://127.0.0.1:8765", {
     method: "POST",
@@ -29,6 +96,8 @@ function summarize(items) {
 
 async function handleMessage(message) {
   if (!message) return undefined;
+
+  if (message.type === "HAB_NLM_GRAB") return grabNotebookResponse(message.request);
 
   if (message.type === "HAB_ANKI_GET_DECKS") {
     try {

@@ -242,17 +242,33 @@
     return { text: parts.join("\n").trim(), images };
   }
 
-  function extractEmbeddedFlashcards(appData, expectedArtifactId) {
+  function extractEmbeddedFlashcards(appData, expectedArtifactId, strictRecords = false) {
     const found = [];
     const seen = new Set();
     let duplicateCount = 0;
+    let invalidCount = 0;
     const sourceCards = appData.flashcards;
 
+    // Temporary local diagnostics: expose status values and short Front labels
+    // so deleted/archived records can be identified without guessing semantics.
+    const statusDiagnostics = sourceCards.map((record, index) => ({
+      index,
+      userStatus: record && typeof record === "object" ? record.userStatus ?? null : null,
+      frontPreview: extractAppSide(record && typeof record === "object" ? record.f : null).text.slice(0, 100)
+    }));
+    console.info("[Notebook to Anki Bridge] NotebookLM source-card status diagnostics", statusDiagnostics);
+
     for (const record of sourceCards) {
-      if (!record || typeof record !== "object") continue;
+      if (!record || typeof record !== "object") {
+        invalidCount++;
+        continue;
+      }
       const front = extractAppSide(record.f);
       const back = extractAppSide(record.b);
-      if (!front.text || !back.text) continue;
+      if (!front.text || !back.text) {
+        invalidCount++;
+        continue;
+      }
 
       const key = front.text + "\u0000" + back.text;
       if (seen.has(key)) {
@@ -268,8 +284,11 @@
       });
     }
 
-    if (!found.length) {
-      throw new Error("The artifact app data was found, but no complete Front/Back flashcards could be extracted.");
+    if (strictRecords && invalidCount > 0) {
+      throw new Error("The artifact app data contains " + invalidCount + " invalid flashcard record(s); the dataset was rejected.");
+    }
+    if (sourceCards.length > 0 && !found.length) {
+      throw new Error("The artifact app data was found, but its non-empty flashcards array contained no complete Front/Back cards.");
     }
 
     return {
@@ -277,6 +296,7 @@
       cards: found,
       total: found.length,
       rawCardRecords: sourceCards.length,
+      invalidCardRecords: invalidCount,
       duplicateCount,
       orderIndexCount: 0,
       orderIndexMin: null,
@@ -286,7 +306,7 @@
     };
   }
 
-  function parseResponse(raw, expectedArtifactId) {
+  function parseResponse(raw, expectedArtifactId, options = {}) {
     if (typeof raw !== "string" || raw.length > 8_000_000) {
       throw new Error("Invalid or oversized RPC response.");
     }
@@ -303,7 +323,7 @@
     // Current NotebookLM Flashcard artifacts are returned by v9rmvd as HTML.
     // The HTML embeds the structured source data in [data-app-data].
     const appData = findEmbeddedAppData(decoded);
-    if (appData) return extractEmbeddedFlashcards(appData, expectedArtifactId);
+    if (appData) return extractEmbeddedFlashcards(appData, expectedArtifactId, options.strictRecords === true);
 
     // Retain support for the older latestCompletion response shape.
     const artifactFound = [];
