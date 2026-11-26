@@ -195,3 +195,64 @@ test("RPC parser rejects malformed records even when other cards are valid", () 
     /invalid flashcard record/
   );
 });
+
+function loadNetworkHook(file, messages) {
+  const location = {
+    href: "https://notebook.google.com/notebook/11111111-1111-4111-8111-111111111111",
+    origin: "https://notebook.google.com"
+  };
+  class FakeXMLHttpRequest {
+    addEventListener() {}
+    open() {}
+    send() {}
+    setRequestHeader() {}
+  }
+  const window = {
+    __NAB_RPC_HOOK__: false,
+    fetch: async () => ({
+      ok: true,
+      clone: () => ({ text: async () => "mock-rpc-response" })
+    }),
+    postMessage: message => messages.push(message)
+  };
+  const context = {
+    window, location, URL, Request, Headers, Blob, ArrayBuffer, TextDecoder,
+    XMLHttpRequest: FakeXMLHttpRequest, Set, String, Object, Promise
+  };
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(root, file), "utf8"), context, { filename: file });
+  return window;
+}
+
+for (const hookFile of ["network-hook.js", "chrome/network-hook.js"]) {
+  test(hookFile + ": safely snapshots a Request body without consuming the original request", async () => {
+    const messages = [];
+    const page = loadNetworkHook(hookFile, messages);
+    const request = new Request(validUrl, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      body: validBody
+    });
+    await page.fetch(request);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(request.bodyUsed, false);
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0].requestMeta.method, "POST");
+    assert.equal(messages[0].requestMeta.body, validBody);
+    assert.equal(messages[0].requestMeta.url, validUrl);
+    assert.equal(messages[0].responseText, "mock-rpc-response");
+  });
+
+  test(hookFile + ": snapshots a string init body for a matching RPC", async () => {
+    const messages = [];
+    const page = loadNetworkHook(hookFile, messages);
+    await page.fetch(validUrl, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      body: validBody
+    });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0].requestMeta.body, validBody);
+  });
+}
