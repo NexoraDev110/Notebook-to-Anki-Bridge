@@ -10,6 +10,9 @@
   let imageCount = 0;
   let extractionMeta = null;
   let captureError = "";
+  let hasCaptured = false;
+  let lastRequestMeta = null;
+  let grabInProgress = false;
 
 const clean = value => String(value || "").replace(/\s+/g, " ").trim();
   const csvCell = value => '"' + String(value || "").replace(/"/g, '""') + '"';
@@ -28,12 +31,14 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
     const count = document.querySelector("#hab-count");
     const preview = document.querySelector("#hab-preview");
     const enabled = cards.length > 0;
+    const grabButton = document.querySelector("#hab-grab");
+    if (grabButton) grabButton.disabled = !lastRequestMeta || grabInProgress;
     for (const selector of ["#hab-csv", "#hab-tsv", "#hab-anki-all"]) {
       const button = document.querySelector(selector);
       if (button) button.disabled = !enabled;
     }
     if (count) {
-      count.textContent = enabled
+      count.textContent = captureError || (hasCaptured
         ? cards.length + " structured cards captured" +
           (extractionMeta?.rawCardRecords
             ? " · " + extractionMeta.rawCardRecords + " source card records"
@@ -50,7 +55,7 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
             : "") +
           (imageCount ? " · " + imageCount + " image references (alt text only)" : "") +
           (artifactId ? " · Artifact " + artifactId : "")
-        : captureError || "Waiting for the Notebook flashcards RPC response. Reload the artifact page if needed.";
+        : "Waiting for the Notebook flashcards RPC response. Reload the artifact page if needed.");
     }
     if (preview) {
       preview.textContent = cards.slice(0, 3).map((c, i) =>
@@ -62,40 +67,52 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
   function capture(raw, requestUrl) {
     try {
       const url = new URL(requestUrl, location.href);
+      if (url.origin !== location.origin ||
+          url.pathname !== "/_/LabsTailwindUi/data/batchexecute" ||
+          !(url.searchParams.get("rpcids") || "").split(",").includes("v9rmvd")) {
+        throw new Error("Unexpected NotebookLM response URL.");
+      }
       const sourcePath = url.searchParams.get("source-path") || "";
       const match = sourcePath.match(/\/artifact\/([a-f0-9-]{36})/i);
       const requestedId = match ? match[1] : "";
       const result = window.HABRpcParser.parseResponse(raw, requestedId);
+      if (!result || !Array.isArray(result.cards)) throw new Error("Parser returned an invalid card dataset.");
       if (requestedId && result.artifactId && requestedId !== result.artifactId) {
         throw new Error("Artifact ID mismatch.");
       }
-      cards = result.cards.map(card => ({
-        front: card.front,
-        back: card.back,
-        tags: ["Notebook", "AnkiBridge"]
-      }));
-      artifactId = requestedId;
-      imageCount = result.imageCount;
-      extractionMeta = {
+      const nextCards = result.cards.map(card => {
+        if (!card || typeof card.front !== "string" || typeof card.back !== "string" ||
+            !card.front.trim() || !card.back.trim()) {
+          throw new Error("The response contains an invalid Front/Back card.");
+        }
+        return { front: card.front, back: card.back, tags: ["Notebook", "AnkiBridge"] };
+      });
+      const nextArtifactId = result.artifactId || requestedId;
+      const nextImageCount = Number.isInteger(result.imageCount) && result.imageCount >= 0 ? result.imageCount : 0;
+      const nextMeta = {
         rawCardRecords: result.rawCardRecords || 0,
         duplicateCount: result.duplicateCount || 0,
         orderIndexCount: result.orderIndexCount || 0,
         orderIndexMin: result.orderIndexMin,
         orderIndexMax: result.orderIndexMax,
-        orderIndexGaps: result.orderIndexGaps || []
+        orderIndexGaps: Array.isArray(result.orderIndexGaps) ? result.orderIndexGaps : []
       };
+      cards = nextCards;
+      artifactId = nextArtifactId;
+      imageCount = nextImageCount;
+      extractionMeta = nextMeta;
+      hasCaptured = true;
       captureError = "";
       renderStatus();
-      console.info(PREFIX, "captured structured cards", {
-        count: cards.length, artifactId, imageCount
-      });
+      console.info(PREFIX, "replaced captured dataset", { count: cards.length, artifactId, imageCount });
+      return true;
     } catch (error) {
-      captureError = "RPC detected, but parsing failed: " + clean(error.message || error);
+      captureError = "Grab/capture failed; previous dataset retained: " + clean(error.message || error);
       renderStatus();
       console.warn(PREFIX, captureError);
+      return false;
     }
   }
-
   window.addEventListener("message", event => {
     if (event.source !== window || event.origin !== location.origin) return;
     const data = event.data;
@@ -103,6 +120,12 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
         data.type !== "NOTEBOOK_RPC_RESPONSE" ||
         !["v9rmvd"].includes(data.rpcId) ||
         typeof data.responseText !== "string") return;
+    if (data.requestMeta && typeof data.requestMeta === "object" &&
+        data.requestMeta.url === data.requestUrl &&
+        data.requestMeta.method === "POST" &&
+        typeof data.requestMeta.body === "string") {
+      lastRequestMeta = data.requestMeta;
+    }
     capture(data.responseText, data.requestUrl || location.href);
   });
 
@@ -188,6 +211,9 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
 
     const actions = makeElement("div");
     actions.className = "hab-actions";
+    const grabButton = makeElement("button", "hab-grab", "Grab latest");
+    grabButton.type = "button";
+    grabButton.disabled = true;
     const csvButton = makeElement("button", "hab-csv", "Export CSV");
     csvButton.type = "button";
     csvButton.disabled = true;
@@ -197,7 +223,7 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
     const ankiButton = makeElement("button", "hab-anki-all", "Send all cards to Anki");
     ankiButton.type = "button";
     ankiButton.disabled = true;
-    actions.append(csvButton, tsvButton, ankiButton);
+    actions.append(grabButton, csvButton, tsvButton, ankiButton);
 
     const footer = makeElement("small", null, "Flashcard response data is processed locally and is not sent to the developer. Anki import happens only when you click Send all cards to Anki. Images are represented by alt text, not embedded.");
 
@@ -243,6 +269,28 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
       if (!panel.hidden && !deckSelect.options.length) loadDecks();
     });
     root.querySelector("#hab-deck-refresh").addEventListener("click", loadDecks);
+    root.querySelector("#hab-grab").addEventListener("click", async () => {
+      if (!lastRequestMeta || grabInProgress) return;
+      grabInProgress = true;
+      renderStatus();
+      count.textContent = "Refreshing flashcards from NotebookLM…";
+      try {
+        const runtime = typeof browser !== "undefined" ? browser.runtime : chrome.runtime;
+        const response = await runtime.sendMessage({ type: "HAB_NLM_GRAB", request: lastRequestMeta });
+        if (!response || !response.ok || typeof response.responseText !== "string") {
+          throw new Error(response?.error || "NotebookLM Grab returned no usable response.");
+        }
+        if (!capture(response.responseText, lastRequestMeta.url)) {
+          throw new Error(captureError || "The refreshed dataset could not be parsed.");
+        }
+      } catch (error) {
+        captureError = "Grab failed; previous dataset retained: " + clean(error.message || error);
+        renderStatus();
+      } finally {
+        grabInProgress = false;
+        renderStatus();
+      }
+    });
     deckSearch.addEventListener("input", () => {
       const matchCount = renderDeckOptions(deckSelect.value);
       deckStatus.textContent = matchCount
