@@ -64,7 +64,7 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
     }
   }
 
-  function capture(raw, requestUrl) {
+  function capture(raw, requestUrl, strictRecords = false) {
     try {
       const url = new URL(requestUrl, location.href);
       if (url.origin !== location.origin ||
@@ -75,7 +75,7 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
       const sourcePath = url.searchParams.get("source-path") || "";
       const match = sourcePath.match(/\/artifact\/([a-f0-9-]{36})/i);
       const requestedId = match ? match[1] : "";
-      const result = window.HABRpcParser.parseResponse(raw, requestedId);
+      const result = window.HABRpcParser.parseResponse(raw, requestedId, { strictRecords });
       if (!result || !Array.isArray(result.cards)) throw new Error("Parser returned an invalid card dataset.");
       if (requestedId && result.artifactId && requestedId !== result.artifactId) {
         throw new Error("Artifact ID mismatch.");
@@ -280,7 +280,7 @@ const clean = value => String(value || "").replace(/\s+/g, " ").trim();
         if (!response || !response.ok || typeof response.responseText !== "string") {
           throw new Error(response?.error || "NotebookLM Grab returned no usable response.");
         }
-        if (!capture(response.responseText, lastRequestMeta.url)) {
+        if (!capture(response.responseText, lastRequestMeta.url, true)) {
           throw new Error(captureError || "The refreshed dataset could not be parsed.");
         }
       } catch (error) {
