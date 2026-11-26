@@ -242,7 +242,7 @@
     return { text: parts.join("\n").trim(), images };
   }
 
-  function extractEmbeddedFlashcards(appData, expectedArtifactId) {
+  function extractEmbeddedFlashcards(appData, expectedArtifactId, strictRecords = false) {
     const found = [];
     const seen = new Set();
     let duplicateCount = 0;
@@ -275,7 +275,7 @@
       });
     }
 
-    if (invalidCount > 0) {
+    if (strictRecords && invalidCount > 0) {
       throw new Error("The artifact app data contains " + invalidCount + " invalid flashcard record(s); the dataset was rejected.");
     }
     if (sourceCards.length > 0 && !found.length) {
@@ -287,6 +287,7 @@
       cards: found,
       total: found.length,
       rawCardRecords: sourceCards.length,
+      invalidCardRecords: invalidCount,
       duplicateCount,
       orderIndexCount: 0,
       orderIndexMin: null,
@@ -296,7 +297,7 @@
     };
   }
 
-  function parseResponse(raw, expectedArtifactId) {
+  function parseResponse(raw, expectedArtifactId, options = {}) {
     if (typeof raw !== "string" || raw.length > 8_000_000) {
       throw new Error("Invalid or oversized RPC response.");
     }
@@ -313,7 +314,7 @@
     // Current NotebookLM Flashcard artifacts are returned by v9rmvd as HTML.
     // The HTML embeds the structured source data in [data-app-data].
     const appData = findEmbeddedAppData(decoded);
-    if (appData) return extractEmbeddedFlashcards(appData, expectedArtifactId);
+    if (appData) return extractEmbeddedFlashcards(appData, expectedArtifactId, options.strictRecords === true);
 
     // Retain support for the older latestCompletion response shape.
     const artifactFound = [];
