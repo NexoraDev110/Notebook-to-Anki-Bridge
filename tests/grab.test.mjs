@@ -230,7 +230,7 @@ function loadNetworkHook(file, messages) {
   };
   window.XMLHttpRequest = FakeXMLHttpRequest;
   const context = {
-    window, location, URL, Request, Headers, Blob, ArrayBuffer, TextDecoder,
+    window, location, URL, URLSearchParams, Request, Headers, Blob, ArrayBuffer, TextDecoder,
     XMLHttpRequest: FakeXMLHttpRequest, Set, String, Object, Promise
   };
   vm.createContext(context);
