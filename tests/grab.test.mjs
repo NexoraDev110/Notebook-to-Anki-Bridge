@@ -191,7 +191,11 @@ test("RPC parser rejects malformed records even when other cards are valid", () 
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(path.join(root, "rpc-parser.js"), "utf8"), context);
   assert.throws(
-    () => context.window.HABRpcParser.parseResponse(JSON.stringify("<html><div data-app-data></div></html>"), ""),
+    () => context.window.HABRpcParser.parseResponse(
+      JSON.stringify("<html><div data-app-data></div></html>"),
+      "",
+      { strictRecords: true }
+    ),
     /invalid flashcard record/
   );
 });
@@ -309,3 +313,37 @@ for (const hookFile of ["network-hook.js", "chrome/network-hook.js"]) {
     assert.equal(messages[0].requestMeta.body, validBody);
   });
 }
+
+test("RPC parser preserves legacy passive extraction behavior for mixed records", () => {
+  const context = {
+    window: {},
+    DOMParser: class {
+      parseFromString() {
+        return {
+          querySelector() {
+            return { dataset: { appData: JSON.stringify({ flashcards: [
+              { f: "Question", b: "Answer" },
+              { f: "", b: "" }
+            ] }) } };
+          }
+        };
+      }
+    },
+    Set,
+    Object,
+    Array,
+    JSON,
+    Number,
+    String,
+    RegExp,
+    Error
+  };
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(root, "rpc-parser.js"), "utf8"), context);
+  const result = context.window.HABRpcParser.parseResponse(
+    JSON.stringify("<html><div data-app-data></div></html>"),
+    ""
+  );
+  assert.equal(result.cards.length, 1);
+  assert.equal(result.invalidCardRecords, 1);
+});
