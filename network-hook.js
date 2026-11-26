@@ -49,7 +49,7 @@
   async function snapshotFetchRequest(input, init) {
     const isRequest = input instanceof Request;
     const request = isRequest ? input : null;
-    const url = request ? request.url : String(input);
+    const url = request ? request.url : new URL(String(input), location.href).href;
     const method = String(init?.method || request?.method || "GET").toUpperCase();
     const headers = safeHeaders(request?.headers, init?.headers);
     let body = "";
@@ -87,12 +87,13 @@
 
     // Clone the Request before the original fetch consumes its body. The original
     // request is never read, replaced, delayed, or otherwise mutated.
+    const absoluteUrl = new URL(requestUrl, location.href).href;
     const snapshotPromise = snapshotFetchRequest(input, args[1]).catch(() => null);
     return originalFetch.apply(this, args).then(response => {
       if (response && response.ok) {
         Promise.all([snapshotPromise, response.clone().text()])
           .then(([snapshot, responseText]) => {
-            if (snapshot) relay(requestUrl, rpcId, responseText, snapshot);
+            if (snapshot) relay(absoluteUrl, rpcId, responseText, snapshot);
           })
           .catch(() => {});
       }
