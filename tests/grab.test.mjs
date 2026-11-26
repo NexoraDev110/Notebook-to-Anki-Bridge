@@ -82,6 +82,20 @@ for (const backgroundFile of ["background.js", "chrome/background.js"]) {
     });
   }
 
+  test(backgroundFile + ": concurrent Grab requests are rejected", async () => {
+    let releaseFetch;
+    const grab = loadGrabFunction(backgroundFile, () => new Promise(resolve => {
+      releaseFetch = () => resolve({ ok: true, status: 200, text: async () => "rpc-ok" });
+    }));
+    const first = grab(validRequest);
+    await Promise.resolve();
+    const second = await grab(validRequest);
+    assert.equal(second.ok, false);
+    assert.match(second.error, /already in progress/);
+    releaseFetch();
+    assert.equal((await first).ok, true);
+  });
+
   test(backgroundFile + ": HTTP failure is reported without a false success", async () => {
     const grab = loadGrabFunction(backgroundFile, async () => ({
       ok: false, status: 403, text: async () => "forbidden"
@@ -147,5 +161,37 @@ test("RPC parser rejects non-empty malformed flashcard records", () => {
   assert.throws(
     () => context.window.HABRpcParser.parseResponse(JSON.stringify("<html><div data-app-data></div></html>"), ""),
     /non-empty flashcards array/
+  );
+});
+
+test("RPC parser rejects malformed records even when other cards are valid", () => {
+  const context = {
+    window: {},
+    DOMParser: class {
+      parseFromString() {
+        return {
+          querySelector() {
+            return { dataset: { appData: JSON.stringify({ flashcards: [
+              { f: "Question", b: "Answer" },
+              { f: "", b: "" }
+            ] }) } };
+          }
+        };
+      }
+    },
+    Set,
+    Object,
+    Array,
+    JSON,
+    Number,
+    String,
+    RegExp,
+    Error
+  };
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(root, "rpc-parser.js"), "utf8"), context);
+  assert.throws(
+    () => context.window.HABRpcParser.parseResponse(JSON.stringify("<html><div data-app-data></div></html>"), ""),
+    /invalid flashcard record/
   );
 });
