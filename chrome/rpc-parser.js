@@ -248,6 +248,15 @@
     let duplicateCount = 0;
     const sourceCards = appData.flashcards;
 
+    // Temporary local diagnostics: expose status values and short Front labels
+    // so deleted/archived records can be identified without guessing semantics.
+    const statusDiagnostics = sourceCards.map((record, index) => ({
+      index,
+      userStatus: record && typeof record === "object" ? record.userStatus ?? null : null,
+      frontPreview: extractAppSide(record && typeof record === "object" ? record.f : null).text.slice(0, 100)
+    }));
+    console.info("[Notebook to Anki Bridge] NotebookLM source-card status diagnostics", statusDiagnostics);
+
     for (const record of sourceCards) {
       if (!record || typeof record !== "object") continue;
       const front = extractAppSide(record.f);
