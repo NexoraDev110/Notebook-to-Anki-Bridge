@@ -93,7 +93,9 @@
       if (response && response.ok) {
         Promise.all([snapshotPromise, response.clone().text()])
           .then(([snapshot, responseText]) => {
-            if (snapshot) relay(absoluteUrl, rpcId, responseText, snapshot);
+            // Passive extraction must continue even when Grab cannot snapshot
+            // an unsupported request-body type.
+            relay(absoluteUrl, rpcId, responseText, snapshot);
           })
           .catch(() => {});
       }
@@ -133,15 +135,20 @@
         headers: target.headers,
         body: typeof normalized === "string" ? normalized : null
       };
-      if (requestMeta && requestMeta.body !== null && requestMeta.body.length <= MAX_REQUEST_BODY) {
-        this.addEventListener("load", () => {
-          try {
-            if (this.status >= 200 && this.status < 300) {
-              relay(target.url, target.rpcId, this.responseText, requestMeta);
-            }
-          } catch (_) {}
-        }, { once: true });
-      }
+      const usableRequestMeta = requestMeta &&
+        requestMeta.body !== null &&
+        requestMeta.body.length <= MAX_REQUEST_BODY
+        ? requestMeta
+        : null;
+      // Always relay the response for passive extraction. Grab metadata is
+      // optional and only controls whether the refresh button can be enabled.
+      this.addEventListener("load", () => {
+        try {
+          if (this.status >= 200 && this.status < 300) {
+            relay(target.url, target.rpcId, this.responseText, usableRequestMeta);
+          }
+        } catch (_) {}
+      }, { once: true });
     }
     return originalSend.call(this, body);
   };
