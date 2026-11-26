@@ -243,6 +243,21 @@ for (const hookFile of ["network-hook.js", "chrome/network-hook.js"]) {
     assert.equal(messages[0].responseText, "mock-rpc-response");
   });
 
+  test(hookFile + ": normalizes relative RPC URLs before sending request metadata", async () => {
+    const messages = [];
+    const page = loadNetworkHook(hookFile, messages);
+    const relativeUrl = new URL(validUrl).pathname + new URL(validUrl).search;
+    await page.fetch(relativeUrl, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      body: validBody
+    });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0].requestMeta.url, validUrl);
+    assert.equal(messages[0].requestUrl, validUrl);
+  });
+
   test(hookFile + ": snapshots a string init body for a matching RPC", async () => {
     const messages = [];
     const page = loadNetworkHook(hookFile, messages);
