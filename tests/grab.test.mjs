@@ -224,6 +224,7 @@ function loadNetworkHook(file, messages) {
     }),
     postMessage: message => messages.push(message)
   };
+  window.XMLHttpRequest = FakeXMLHttpRequest;
   const context = {
     window, location, URL, Request, Headers, Blob, ArrayBuffer, TextDecoder,
     XMLHttpRequest: FakeXMLHttpRequest, Set, String, Object, Promise
