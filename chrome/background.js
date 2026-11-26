@@ -1,7 +1,11 @@
 "use strict";
 
+let grabInFlight = false;
+
 async function grabNotebookResponse(request) {
   const fail = message => ({ ok: false, error: message });
+  if (grabInFlight) return fail("A NotebookLM Grab request is already in progress.");
+  grabInFlight = true;
   try {
     if (!request || typeof request !== "object") return fail("Missing captured NotebookLM request.");
     if (typeof request.url !== "string" || request.url.length > 4096) return fail("Invalid request URL.");
@@ -58,6 +62,8 @@ async function grabNotebookResponse(request) {
     return { ok: true, responseText };
   } catch (error) {
     return fail(String(error?.message || error));
+  } finally {
+    grabInFlight = false;
   }
 }
 
