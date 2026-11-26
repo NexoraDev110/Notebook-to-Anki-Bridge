@@ -202,9 +202,18 @@ function loadNetworkHook(file, messages) {
     origin: "https://notebook.google.com"
   };
   class FakeXMLHttpRequest {
-    addEventListener() {}
+    constructor() {
+      this.status = 200;
+      this.responseText = "mock-xhr-response";
+      this.listeners = {};
+    }
+    addEventListener(name, callback) {
+      (this.listeners[name] ||= []).push(callback);
+    }
     open() {}
-    send() {}
+    send() {
+      for (const callback of this.listeners.load || []) callback.call(this);
+    }
     setRequestHeader() {}
   }
   const window = {
@@ -256,6 +265,34 @@ for (const hookFile of ["network-hook.js", "chrome/network-hook.js"]) {
     assert.equal(messages.length, 1);
     assert.equal(messages[0].requestMeta.url, validUrl);
     assert.equal(messages[0].requestUrl, validUrl);
+  });
+
+  test(hookFile + ": keeps passive fetch extraction when request body cannot be snapshotted", async () => {
+    const messages = [];
+    const page = loadNetworkHook(hookFile, messages);
+    const form = new FormData();
+    form.append("f.req", "payload");
+    await page.fetch(validUrl, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      body: form
+    });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0].responseText, "mock-rpc-response");
+    assert.equal(messages[0].requestMeta, null);
+  });
+
+  test(hookFile + ": keeps passive XHR extraction when request body cannot be snapshotted", () => {
+    const messages = [];
+    const page = loadNetworkHook(hookFile, messages);
+    const xhr = new page.XMLHttpRequest();
+    xhr.open("POST", validUrl);
+    xhr.setRequestHeader("content-type", "application/x-www-form-urlencoded;charset=UTF-8");
+    xhr.send(new FormData());
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0].responseText, "mock-xhr-response");
+    assert.equal(messages[0].requestMeta, null);
   });
 
   test(hookFile + ": snapshots a string init body for a matching RPC", async () => {
